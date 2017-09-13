@@ -1,5 +1,3 @@
-var THREE = require('three');
-
 class BSpline {
     constructor(pointsArray, order){
         this.pointsArray = [];
@@ -17,7 +15,7 @@ class BSpline {
         var dec = 0;
         var i = this.k;
         
-        while(u > u[i]){
+        while(u > this.u[i]){
             dec++;
             i++;
         }
@@ -29,20 +27,23 @@ class BSpline {
         return this.floraison(points, dec, u, 0);
     }
     
+    get(){
+        var result = [];
+        for(var i = this.u[this.k - 1]; i < this.u[this.pointsArray.length]; i+=0.1 ){
+            result.push(this.computePoint(i))
+        }
+        return result;
+    }
+    
     floraison(points, dec, u, r){
         if(r == this.k - 1)
             return points[0];
-        for(var i = 0; i < this.k - 1 - r; i++){
+        for(var i = 0; i < this.k - r - 1; i++){
             var ut1 = this.u[dec + 1 + i + r];
             var ut2 = this.u[dec + this.k + i];
             var deltaUt = ut2 - ut1;
-            console.log((ut2 - u) / deltaUt + (u - ut1) / deltaUt)
             points[i] = points[i].multiplyScalar((ut2 - u) / deltaUt).add(points[i+1].multiplyScalar((u - ut1) / deltaUt));
         }
         return this.floraison(points, dec, u, r + 1);
     }
 }
-
-var test = new BSpline([new THREE.Vector3( 1, 0, 0 ),new THREE.Vector3( 2, 0, 0 ), new THREE.Vector3( 3, 0, 0 )],3);
-console.log(test)
-console.log(test.computePoint(2));
