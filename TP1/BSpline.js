@@ -29,7 +29,7 @@ class BSpline {
     
     get(){
         var result = [];
-        for(var i = this.u[this.k - 1]; i < this.u[this.pointsArray.length]; i+=0.1 ){
+        for(var i = this.u[this.k - 1]; i <= this.u[this.pointsArray.length]; i+=0.1 ){
             result.push(this.computePoint(i))
         }
         return result;
@@ -42,7 +42,7 @@ class BSpline {
             var ut1 = this.u[dec + 1 + i + r];
             var ut2 = this.u[dec + this.k + i];
             var deltaUt = ut2 - ut1;
-            points[i] = points[i].multiplyScalar((ut2 - u) / deltaUt).add(points[i+1].multiplyScalar((u - ut1) / deltaUt));
+            points[i] = points[i].multiplyScalar((ut2 - u) / deltaUt).add(points[i+1].clone().multiplyScalar((u - ut1) / deltaUt));
         }
         return this.floraison(points, dec, u, r + 1);
     }

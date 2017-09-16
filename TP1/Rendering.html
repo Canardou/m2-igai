@@ -1,39 +1,90 @@
 <!DOCTYPE html>
 <html>
     <head>
+        <script id="vertexShader" type="x-shader/x-vertex">
+        void main() {
+            gl_Position =   projectionMatrix * 
+                            modelViewMatrix * 
+                            vec4(position,1.0);
+        }
+        </script>
+        <script id="fragmentShader" type="x-shader/x-fragment">
+        void main() {
+          gl_FragColor = vec4(vec3(1.0),1.0); // Works; Displays Flat Color
+        }
+        </script>
         <script src="three.min.js"></script>
         <script src="BSpline.js"></script>
-       
     </head>
     <body>
         
     </body>
 </html>
 <script>
-    var test = new BSpline([new THREE.Vector3( -2, 0, 0),new THREE.Vector3( 2, 0, 0 ), new THREE.Vector3( 0, 5, 0 ), new THREE.Vector3( -5, 5, 0 )],2);
-    console.log(test)
+    /*global THREE*/
+    var points = [-200, 0, 0,
+                    200, 0, 0,
+                    0, 200, 0,
+                    -200, 200, 0,
+                    -200, 0, 0];
+    var v3points = [];
+    for(var i = 0; i < points.length/3; i++){
+        v3points.push(new THREE.Vector3(points[i*3], points[i*3+1], points[i*3+2]));
+    }
+    var bspline = new BSpline(v3points,3);
     
+    var geom = new THREE.Geometry();
+    
+    geom.vertices = geom.vertices.concat(bspline.get());
+    
+    //var line = new THREE.Line(geom, material);
+    
+    v3points.map(e => e.add(new THREE.Vector3(0,0,200)));
+    bspline = new BSpline(v3points,3);
+    
+    geom.vertices = geom.vertices.concat(bspline.get());
+    
+    var scene = new THREE.Scene();
+
     var renderer = new THREE.WebGLRenderer();
     renderer.setSize(window.innerWidth, window.innerHeight);
     document.body.appendChild(renderer.domElement);
     
-    var camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 1, 500);
-    camera.position.set(0, 0, 100);
+    var camera = new THREE.PerspectiveCamera(40, window.innerWidth / window.innerHeight, 1, 15000);
+    camera.position.set(0, 0, 500);
     camera.lookAt(new THREE.Vector3(0, 0, 0));
     
-    var scene = new THREE.Scene();
+    for(var i = 0; i < geom.vertices.length/2 - 1; i++){
+        geom.faces.push( new THREE.Face3( i, i+1, geom.vertices.length/2 + i + 1) );
+        geom.faces.push( new THREE.Face3( i, geom.vertices.length/2 + i + 1, geom.vertices.length/2 + i) );
+    }
     
-    //create a blue LineBasicMaterial
-    var material = new THREE.LineBasicMaterial({ color: 0x0000ff });
+    console.log(geom.vertices)
+    console.log(geom.faces)
     
-    var geometry = new THREE.Geometry();
-    var points = test.get();
-    console.log(points)
-    for(var k in points)
-        geometry.vertices.push(points[k]);
+    geom.computeFaceNormals();
+    var object = new THREE.Mesh( geom, new THREE.MeshNormalMaterial() );
     
-    var line = new THREE.Line(geometry, material);
+   scene.add(object);
     
-    scene.add(line);
-    renderer.render(scene, camera);
+    var mouseX = 0, mouseY = 0;
+    document.addEventListener('mousemove', function(event) {
+        mouseX = (event.clientX - window.innerWidth / 2) * 10;
+        mouseY = (event.clientY - window.innerHeight / 2) * 10;
+    }, false);
+    
+    
+    
+    (function animloop(){
+      requestAnimationFrame(animloop);
+      render();
+    })();
+    
+    function render(){
+        camera.position.x += ( mouseX - camera.position.x ) * .05;
+		camera.position.y += ( - mouseY - camera.position.y ) * .05;
+		camera.lookAt( scene.position );
+
+		renderer.render( scene, camera );
+    }
 </script>
