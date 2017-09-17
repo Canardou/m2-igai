@@ -1,8 +1,6 @@
-class BSpline {
+class BSpline extends Line {
     constructor(pointsArray, order){
-        this.pointsArray = [];
-        for(var k in pointsArray)
-            this.pointsArray[k] =  pointsArray[k].clone();
+        super(pointsArray);
         this.k = order;
         
         this.u = [];
@@ -27,12 +25,12 @@ class BSpline {
         return this.floraison(points, dec, u, 0);
     }
     
-    get(){
-        var result = [];
-        for(var i = this.u[this.k - 1]; i <= this.u[this.pointsArray.length]; i+=0.1 ){
-            result.push(this.computePoint(i))
+    computeLine(numberOfPoints){
+        this.points = [];
+        for(var i = 0; i < numberOfPoints; i++){
+            this.points.push(this.computePoint(this.u[this.k - 1] + i*(this.u[this.pointsArray.length] - this.u[this.k - 1])/numberOfPoints))
         }
-        return result;
+        return this.points;
     }
     
     floraison(points, dec, u, r){
