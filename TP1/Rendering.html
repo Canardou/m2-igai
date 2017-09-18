@@ -2,15 +2,21 @@
 <html>
     <head>
         <script id="vertexShader" type="x-shader/x-vertex">
+        varying vec3 vNormal;
+        
         void main() {
+            vNormal = normal;
+            
             gl_Position =   projectionMatrix * 
                             modelViewMatrix * 
                             vec4(position,1.0);
         }
         </script>
         <script id="fragmentShader" type="x-shader/x-fragment">
+        varying vec3 vNormal;
+        
         void main() {
-            gl_FragColor = vec4(vec3(1.0),1.0);
+            gl_FragColor = vec4(vNormal.x*.5+.5,vNormal.y*.5+.5,vNormal.z*.5+.5,1.0);
         }
         </script>
         <script src="three.min.js"></script>
@@ -18,11 +24,12 @@
         <script src="BSpline.js"></script>
     </head>
     <body>
+        res : <input type="text" onchange="redraw('res',this.value)" value="10"></input> k : <input type="text" onchange="redraw('k',this.value)" value="3"></input> pointsToDraw : <input type="text" onchange="redraw('p',this.value)" value="50"></input>
         
     </body>
 </html>
 <script>
-    /*global THREE*/
+    /*global THREE, BSpline*/
     var points = [-200, 0, 0,
                     0, 0, -100,
                     0, 200, 0,
@@ -35,12 +42,14 @@
         v3points.push(new THREE.Vector3(points[i*3], points[i*3+1], points[i*3+2]));
     }
     
-    var geom = new THREE.Geometry();
+    var values = {
+        'res' : 10,
+        'k' : 3,
+        'p' : 50
+    }
     
-    var res = 5;
-    
-    var line = new BSpline(v3points,2);
-    geom.vertices = geom.vertices.concat(line.getLineCylinder(20,res,50));
+    var line = new BSpline(v3points,values.k);
+    var geom = line.getGeometryCylinder(5,values.res,values.p);
     
     var scene = new THREE.Scene();
 
@@ -52,25 +61,24 @@
     camera.position.set(0, 0, 500);
     camera.lookAt(new THREE.Vector3(0, 0, 0));
     
-    var length = geom.vertices.length;
+    var material = new THREE.ShaderMaterial({
+    	vertexShader: document.getElementById( 'vertexShader' ).textContent,
+    	fragmentShader: document.getElementById( 'fragmentShader' ).textContent
+    });
     
-    for(var i = 0; i < length/res - 1; i++){
-        var currentIndex = i * res;
-        for(var j = 0; j < res - 1; j++){
-            geom.faces.push( new THREE.Face3( currentIndex + j, currentIndex + j + 1, currentIndex + res + j + 1 ));
-            geom.faces.push( new THREE.Face3( currentIndex + j, currentIndex + res + j + 1, currentIndex + res + j ));
-        }
-        geom.faces.push( new THREE.Face3( currentIndex + res - 1, currentIndex, currentIndex + res ));
-        geom.faces.push( new THREE.Face3( currentIndex + res - 1, currentIndex + res, currentIndex + 2 * res - 1));
-    }
-    
-    console.log(geom.faces)
-    console.log(geom.vertices)
-    
-    geom.computeFaceNormals();
-    var object = new THREE.Mesh( geom, new THREE.MeshNormalMaterial() );
+    var object = new THREE.Mesh( geom, material );
     
    scene.add(object);
+   
+   function redraw(attribut,newValue){
+        scene.remove(object);
+        values[attribut] = parseInt(newValue);
+        console.log(values)
+        var line = new BSpline(v3points,values.k);
+        var geom = line.getGeometryCylinder(5,values.res,values.p);
+        object = new THREE.Mesh( geom, material );
+        scene.add(object);
+   }
     
     var mouseX = 0, mouseY = 0;
     document.addEventListener('mousemove', function(event) {
