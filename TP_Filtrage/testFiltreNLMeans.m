@@ -1,37 +1,58 @@
 img=imread('TP1.1.jpg');
 
+gaussian = double(addNoiseGaus(img, 20));
+
+std(gaussian(:))
+
+filteredImage = filtrageNLMeans(gaussian, 5, std(gaussian(:)));
+
+figure;
 colormap(gray(256));
-
-gaussian = addNoiseGaus(img, 20);
-
-filteredImage = filtrageNLMeans(gaussian, 3);
-
-subplot(1,2,1);
+subplot(2,2,1);
 image(gaussian);
-title('Noisy Image');
-subplot(1,2,2);
+title(['Noisy Image - RMSE : ' num2str(rmse(double(imageToGrayScale(img)), gaussian))]);
+axis image;
+subplot(2,2,2);
 image(filteredImage);
-title('Treated Image');
+title(['NL-means filter - RMSE : ' num2str(rmse(double(imageToGrayScale(img)), filteredImage))]);
+axis image;
+subplot(2,2,3);
+moyImage = filtrageMoy(imageToGrayScale(img),5);
+image(moyImage);
+title(['Average filter - RMSE : ' num2str(rmse(double(imageToGrayScale(img)), moyImage))]);
+axis image;
+subplot(2,2,4);
+gausImage=filtrageGaussien(imageToGrayScale(img),5,0.85)
+image(gausImage);
+title(['Gaussian filter - RMSE : ' num2str(rmse(double(imageToGrayScale(img)), gausImage))]);
+axis image;
 
-initial_error = rmse(imageToGrayScale(img), gaussian)
-error = rmse(imageToGrayScale(img), filteredImage)
-delta_error = error-initial_error
+img=imread('TP1.4.jpg');
 
-figure
+gaussian = double(addNoiseGaus(img, 20));
 
+std(gaussian(:))
+
+filteredImage = filtrageNLMeans(gaussian, 5, std(gaussian(:)));
+
+figure;
 colormap(gray(256));
-
-gaussian = addNoiseGaus(img, 50);
-
-filteredImage = filtrageNLMeans(gaussian, 3);
-
-subplot(1,2,1);
+subplot(2,2,1);
 image(gaussian);
-title('Noisy Image');
-subplot(1,2,2);
+title(['Noisy Image - RMSE : ' num2str(rmse(double(imageToGrayScale(img)), gaussian))]);
+axis image;
+subplot(2,2,2);
 image(filteredImage);
-title('Treated Image');
+title(['NL-means filter - RMSE : ' num2str(rmse(double(imageToGrayScale(img)), filteredImage))]);
+axis image;
+subplot(2,2,3);
+moyImage = filtrageMoy(imageToGrayScale(img),5);
+image(moyImage);
+title(['Average filter - RMSE : ' num2str(rmse(double(imageToGrayScale(img)), moyImage))]);
+axis image;
+subplot(2,2,4);
+gausImage=filtrageGaussien(imageToGrayScale(img),5,0.85)
+image(gausImage);
+title(['Gaussian filter - RMSE : ' num2str(rmse(double(imageToGrayScale(img)), gausImage))]);
+axis image;
 
-initial_error = rmse(imageToGrayScale(img), gaussian)
-error = rmse(imageToGrayScale(img), filteredImage)
-delta_error = error-initial_error

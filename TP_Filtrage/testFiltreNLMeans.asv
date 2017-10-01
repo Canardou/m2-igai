@@ -1,0 +1,33 @@
+img=imread('TP1.1.jpg');
+
+colormap(gray(256));
+
+gaussian = double(addNoiseGaus(img, 20));
+
+std(gaussian(:))
+
+filteredImage = filtrageNLMeans(gaussian, 5, std(gaussian(:)));
+
+subplot(2,2,1);
+image(gaussian);
+title(['Noisy Image - RMSE : ' rmse(double(imageToGrayScale(img)), gaussian)]);
+axis image;
+subplot(2,2,2);
+image(filteredImage);
+title(['NL-means filter - RMSE : ' rmse(double(imageToGrayScale(img)), filteredImage)]);
+axis image;
+subplot(2,2,3);
+moyImage = filtrageMoy(imageToGrayScale(img),5);
+image(moyImage);
+title(['Average filter - RMSE : ' rmse(double(imageToGrayScale(img)), moyImage)]);
+axis image;
+subplot(2,2,4);
+gausImage=filtrageGaussien(imageToGrayScale(img),5,0.)
+image(gaussian-filteredImage+128);
+title(['Gaussian filter - RMSE : ' rmse(double(imageToGrayScale(img)), gausImage)]);
+axis image;
+
+initial_error = 
+error = 
+delta_error = error-initial_error
+

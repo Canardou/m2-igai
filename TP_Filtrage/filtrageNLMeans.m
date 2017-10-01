@@ -1,27 +1,35 @@
-function newImage = filtrageNLMeans(grayImage, M)
+function newImage = filtrageNLMeans(grayImage, neighborhoodSize, sigma)
   [n, m] = size(grayImage);
+  grayImage = double(grayImage);
   newImage = grayImage;
-  
-  h = sqrt(2)*std(double(f(:)));
-  M_half = (M-1)/2;
-  num = 1;
-  for i = 1+M_half:n-M_half
-      for j = 1+M_half:m-M_half
-          N(num, :) = rshape( f(i-M_half:i+M_half, j-M_half:j+M_half), [1, M*M]);
-          num = num + 1;
+  nSize = neighborhoodSize*neighborhoodSize;
+  w = (neighborhoodSize-1)/2;
+  % for each pixels store neighborhood (do not treat border)
+  nMatrix = zeros(n,m,nSize);
+  for i = 1+w:n-w
+      for j = 1+w:m-w
+          tmp = grayImage(i-w:i+w,j-w:j+w);
+          nMatrix(i,j,:) = reshape(tmp,1,1,nSize);
       end
   end
-  
-  for i = 1+M_half:n-M_half
-      for j = 1+M_half:m-M_half
-          cur = reshape( f(i-M_half:i+M_half, j-M_half:j+M_half), [1, M*M] );
-          Z = 0;
-          for k = 1:num-1
-              w = exp( -(norm(cur - N(k, :))^2) / (h^2) );
-              g(i, j) = g(i, j) + N(k,(M^2+1)/2)*w;
-              Z = Z + w;
+  h = waitbar(0,'Initializing waitbar...');
+  % filter for each pixel each other pixel
+  for i = 1+w:n-w
+      for j = 1+w:m-w
+          normalisation = 0.0;
+          newImage(i,j) = 0;
+          for k = 1+w:n-w
+              for l = 1+w:m-w
+                m1 = nMatrix(i,j,:);
+                m2 = nMatrix(k,l,:);
+                G = exp(-(norm(m1(:)-m2(:)))^2/(2*sigma^2));
+                normalisation = double(normalisation) + G;
+                newImage(i,j) = double(newImage(i,j) + G * double(grayImage(k,l)));
+              end
           end
-          g(i, j) = g(i,j)/Z;
+          newImage(i,j) = double(newImage(i,j) / normalisation);
+          waitbar(i/n,h,'Calculating...')
       end
   end
+  close(h)
 end
