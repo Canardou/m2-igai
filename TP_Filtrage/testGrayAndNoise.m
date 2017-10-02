@@ -30,7 +30,7 @@ figure
 
 colormap(gray(256));
 
-noisy = addNoisePS(img, 0.50);
+noisy = addNoisePS(img, 0.05);
 
 image(noisy);
 axis image;

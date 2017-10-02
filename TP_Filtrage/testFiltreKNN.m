@@ -37,10 +37,10 @@ disp(H);
 filteredImage = filtrageKNN(ps, 4, 3);
 
 subplot(1,2,1);
-image(ps);
+image(ps(55:80,220:260));
 axis image;
 title('Noisy Image');
 subplot(1,2,2);
-image(filteredImage);
+image(filteredImage(55:80,220:260));
 axis image;
 title('Treated Image');

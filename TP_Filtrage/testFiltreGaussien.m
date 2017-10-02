@@ -43,7 +43,7 @@ colormap(gray(256));
 
 gaussian = addNoiseGaus(img, 20);
 
-filteredImage = filtrageGaussienOctave(gaussian, 5, 0.85);
+filteredImage = filtrageGaussien(gaussian, 5, 0.85);
 
 subplot(1,2,1);
 image(gaussian);

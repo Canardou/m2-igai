@@ -36,10 +36,10 @@ colormap(gray(256));
 filteredImage = filtrageMinMax(ps, 3);
 
 subplot(1,2,1);
-image(ps);
+image(ps(65:100,220:300));
 axis image;
 title('Noisy Image');
 subplot(1,2,2);
-image(filteredImage);
+image(filteredImage(65:100,220:300));
 axis image;
 title('Treated Image');

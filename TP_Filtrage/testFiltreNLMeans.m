@@ -1,9 +1,6 @@
 img=imread('TP1.1.jpg');
 
 gaussian = double(addNoiseGaus(img, 20));
-
-std(gaussian(:))
-
 filteredImage = filtrageNLMeans(gaussian, 5, std(gaussian(:)));
 
 figure;
@@ -25,6 +22,19 @@ subplot(2,2,4);
 gausImage=filtrageGaussien(imageToGrayScale(img),5,0.85)
 image(gausImage);
 title(['Gaussian filter - RMSE : ' num2str(rmse(double(imageToGrayScale(img)), gausImage))]);
+axis image;
+
+figure;
+colormap(gray(256));
+subplot(1,2,2);
+axis image;
+image(filteredImage-gaussian+128);
+title('Difference between filtered and noisy image');
+axis image;
+subplot(1,2,1);
+axis image;
+image(gaussian);
+title('Original noisy image');
 axis image;
 
 img=imread('TP1.4.jpg');

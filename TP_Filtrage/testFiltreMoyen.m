@@ -33,8 +33,6 @@ end
 
 disp(H);
 
-figure
-
 colormap(gray(256));
 
 filteredImage = filtrageMoy(gaussian, 3);
