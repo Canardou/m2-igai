@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <script id="vertexShader" type="x-shader/x-vertex">
+        varying vec3 vNormal;
+        
+        void main() {
+            vNormal = normal;
+            
+            gl_Position =   projectionMatrix * 
+                            modelViewMatrix * 
+                            vec4(position,1.0);
+        }
+        </script>
+        <script id="fragmentShader" type="x-shader/x-fragment">
+        varying vec3 vNormal;
+        
+        void main() {
+            gl_FragColor = vec4(vNormal.x*.5+.5,vNormal.y*.5+.5,vNormal.z*.5+.5,1.0);
+        }
+        </script>
+        <script src="three.min.js"></script>
+        <script src="Line.js"></script>
+        <script src="BSpline.js"></script>
+        <script src="Surface.js"></script>
+    </head>
+    <body>
+        <h1>Produit tensoriel</h1>
+        res : <input type="text" onchange="redraw('res',this.value)" value="10"></input> k : <input type="text" onchange="redraw('k',this.value)" value="3"></input> pointsToDraw : <input type="text" onchange="redraw('p',this.value)" value="50"></input>
+        
+    </body>
+</html>
+<script>
+    /*global THREE, BSpline, Surface*/
+    var points = [[0, 0, 0,
+                    0, 200, 0],
+                    [200, 0, 0,
+                    200, 200, 0],
+                    [400, 0, 0,
+                    400, 200, 300]];
+    var v3points = Surface.matrix(points.length,points[0].length/3);
+    for(var i = 0; i < points.length; i++){
+        for(var j = 0; j < points[i].length/3; j++)
+            v3points[i][j] = new THREE.Vector3(points[i][j*3], points[i][j*3+1], points[i][j*3+2]);
+    }
+    
+    var res = {'x':10,'y':10,'order':2};
+    
+    var surface = new Surface(v3points,BSpline);
+    surface.getSurface(res);
+</script>

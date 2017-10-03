@@ -29,7 +29,6 @@ class BSpline extends Line {
         this.points = [];
         numberOfPoints--;
         for(var i = 0; i <= numberOfPoints; i++){
-            console.log(this.u[this.k - 1] + i*(this.u[this.pointsArray.length] - this.u[this.k - 1])/numberOfPoints)
             this.points.push(this.computePoint(this.u[this.k - 1] + i*(this.u[this.pointsArray.length] - this.u[this.k - 1])/numberOfPoints))
         }
         return this.points;
