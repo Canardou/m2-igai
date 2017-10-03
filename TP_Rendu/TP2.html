@@ -33,19 +33,62 @@
 <script>
     /*global THREE, BSpline, Surface*/
     var points = [[0, 0, 0,
-                    0, 200, 0],
+                    0, 200, 0,
+                    0, 400, 0],
                     [200, 0, 0,
-                    200, 200, 0],
+                    200, 200, 0,
+                    0, 400, 0],
                     [400, 0, 0,
-                    400, 200, 300]];
+                    400, 200, 300,
+                    0, 400, 0]];
     var v3points = Surface.matrix(points.length,points[0].length/3);
     for(var i = 0; i < points.length; i++){
         for(var j = 0; j < points[i].length/3; j++)
             v3points[i][j] = new THREE.Vector3(points[i][j*3], points[i][j*3+1], points[i][j*3+2]);
     }
     
-    var res = {'x':10,'y':10,'order':2};
+    var res = {'x':10,'y':10,'order':3};
     
     var surface = new Surface(v3points,BSpline);
-    surface.getSurface(res);
+    var geom = surface.getSurfaceGeometry(res);
+    
+    var scene = new THREE.Scene();
+
+    var renderer = new THREE.WebGLRenderer();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    document.body.appendChild(renderer.domElement);
+    
+    var camera = new THREE.PerspectiveCamera(40, window.innerWidth / window.innerHeight, 1, 15000);
+    camera.position.set(0, 0, 500);
+    camera.lookAt(new THREE.Vector3(0, 0, 0));
+    
+    var material = new THREE.ShaderMaterial({
+    	vertexShader: document.getElementById( 'vertexShader' ).textContent,
+    	fragmentShader: document.getElementById( 'fragmentShader' ).textContent
+    });
+    
+    var object = new THREE.Mesh( geom, material );
+    
+   scene.add(object);
+    
+    var mouseX = 0, mouseY = 0;
+    document.addEventListener('mousemove', function(event) {
+        mouseX = (event.clientX - window.innerWidth / 2) * 10;
+        mouseY = (event.clientY - window.innerHeight / 2) * 10;
+    }, false);
+    
+    
+    
+    (function animloop(){
+      requestAnimationFrame(animloop);
+      render();
+    })();
+    
+    function render(){
+        camera.position.x += ( mouseX - camera.position.x ) * .05;
+		camera.position.y += ( - mouseY - camera.position.y ) * .05;
+		camera.lookAt( scene.position );
+
+		renderer.render( scene, camera );
+    }
 </script>
