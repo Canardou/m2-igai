@@ -1,0 +1,24 @@
+% 1.
+N = 512;
+f1 = 0.15;
+f2 = 0.18;
+fe = 1;
+t = (1:N)/fe;
+signal = exp(-2i*pi*f1*t) + exp(-2i*pi*f2*t);
+% SNRdB = 10 = 20 * log10( Ps / Pb )
+sigma = sqrt(2/(10^2));
+y=signal;%+sigma*randn(size(t));
+plot(real(y));
+% 2.
+figure;
+N = length(y);
+ydft = fft(real(y));
+psdx = (1/N) * fftshift( abs(ydft).^2 );
+psdx(2:end-1) = 2*psdx(2:end-1);
+freq = (1:N)/N-0.5;
+
+plot(freq,20*log10(psdx))
+grid on
+title('Periodogram Using FFT')
+xlabel('Normalized Frequency')
+ylabel('Power (dB)')
