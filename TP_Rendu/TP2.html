@@ -53,12 +53,15 @@
     var res = {'x':10,'y':10};
     
     var surface = new Surface(v3points,BSpline,3);
+    
     var geom = surface.getSurfaceGeometry(res);
     
     var scene = new THREE.Scene();
 
     var renderer = new THREE.WebGLRenderer();
+
     renderer.setSize(window.innerWidth/2, window.innerHeight/2);
+    
     document.body.appendChild(renderer.domElement);
     
     var camera = new THREE.PerspectiveCamera(40, window.innerWidth / window.innerHeight, 1, 15000);
@@ -73,7 +76,7 @@
     var object = new THREE.Mesh( geom, material );
     
    scene.add(object);
-   
+
    var pointsGeom = new THREE.Geometry();
    for(var k in v3points){
       for(var l in v3points[k]){

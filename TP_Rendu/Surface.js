@@ -14,6 +14,7 @@ class Surface{
             this.args = args;
         else
             this.args = null;
+
     }
     
     computePoints(x,y,order){
@@ -43,6 +44,7 @@ class Surface{
         if(this.resolution == resolution)
             return this.points;
         this.resolution = resolution;
+
         return this.computeSurface(resolution.x, resolution.y, this.args);
     }
     
