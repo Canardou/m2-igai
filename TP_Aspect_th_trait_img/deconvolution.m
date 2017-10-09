@@ -3,62 +3,82 @@ h = [1 4 7; 2 5 8; 3 6 9];
 x = round(5*rand(7,7));
 % a.
 a = conv2(double(h),double(x));
-figure(1);
-image(a), colorbar;
-colormap(gray(256));
-axis image;
+% figure(1);
+% image(a), colorbar;
+% colormap(gray(256));
+% axis image;
 % b.
-figure(2);
+
 H = fft2(double(h),9,9);
 X = fft2(double(x),9,9);
 P = double(H.*X);
 colormap(gray(256));
-subplot(1,3,1);
-image(abs(fftshift(X))), colorbar;
-axis image;
-title('X');
-subplot(1,3,2);
-image(abs(fftshift(H))), colorbar;
-axis image;
-title('H');
-subplot(1,3,3);
-image(abs(ifft2(P))), colorbar;
-axis image;
-title('P');
+% figure(2);
+% subplot(1,3,1);
+% image(abs(fftshift(X))), colorbar;
+% axis image;
+% title('X');
+% subplot(1,3,2);
+% image(abs(fftshift(H))), colorbar;
+% axis image;
+% title('H');
+% subplot(1,3,3);
+% image(abs(ifft2(P))), colorbar;
+% axis image;
+% title('P');
 % c.
 p2 = imfilter(x, h, 'conv', 'circular', 'same');
-figure(3);
-colormap(gray(256));
-image(p2), colorbar;
-axis image;
+% figure(3);
+% colormap(gray(256));
+% image(p2), colorbar;
+% axis image;
 % d.
-figure(4);
-colormap(gray(256));
-d = ifft2(fft2(x).*fft2(h,7,7));
-image(abs(d)), colorbar;
-axis image;
-% e.
-hpadded = circshift(padarray(h(:), 20, 0),25);
-hcirc = gallery('circul',hpadded);
-% b = cell(3,1);
-% b{1,1} = circulant(h(:,1));
-% b{2,1} = circulant(h(:,2));
-% b{3,1} = circulant(h(:,3));
-% H = cell2mat(circulant(b)); 
-% Hpadded = padarray(H,[20 20],0,'both');
-% Hcirc = circshift(Hpadded,-24);
-p3 = reshape(double(hcirc)*x(:),[7 7]);
+center=(size(x)+1)/2;
+hpad1=circshift(padarray(h,(size(x)-size(h))./2), 1-center);
 
-figure(5);
-subplot(2,1,1);
-colormap(gray(256));
-image(p2);
-axis image;
-subplot(2,1,2);
-image(p3);
-axis image;
+S=fft2(hpad1);
+ConvCircFreq=ifft2(S.*fft2(x));
 
-function r=circulant(h)
-    r = [h(2) h(1) h(3);h(3) h(2) h(1);h(1) h(3) h(2)];
+% figure(4);
+% colormap(gray(256));
+% image(real(ConvCircFreq)), colorbar;
+% axis image;
+
+%3.e
+szx=size(x)
+ConvCircBCCB=zeros(size(x));
+BCCB=[]
+for i=1:szx(1)
+    for j=1:szx(2)
+        dcenter=(size(x)+1)/2-[i,j]
+        hpad2=circshift(rot90(hpad,2), -dcenter)
+        ConvCircBCCB(i,j)=hpad2(:)'*x(:);
+        BCCB=[BCCB hpad2(:)]
+    end
 end
 
+figure(1)
+subplot(1,5,1)
+imagesc(a)
+title('3.a.');
+axis image;
+subplot(1,5,2)
+imagesc(abs(ifft2(P)))
+title('3.b.');
+axis image;
+subplot(1,5,3)
+imagesc(p2)
+title('3.c.');
+axis image;
+subplot(1,5,4)
+imagesc(abs(ConvCircFreq))
+title('3.d.');
+axis image;
+subplot(1,5,5)
+imagesc(ConvCircBCCB)
+title('3.e.');
+axis image;
+figure(2)
+imagesc(BCCB)
+title('BCCB');
+axis image;
