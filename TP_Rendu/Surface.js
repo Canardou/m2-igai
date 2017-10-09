@@ -1,6 +1,6 @@
 /*global THREE*/
 class Surface{
-    constructor(pointsArray, lineGenerator){
+    constructor(pointsArray, lineGenerator, args){
         this.pointsArray = Surface.matrix(pointsArray.length,pointsArray[0].length);
         for(var k in pointsArray)
             for(var l in pointsArray[k])
@@ -9,6 +9,11 @@ class Surface{
         this.resolution = {'x':0,'y':0};
         this.points = [];
         this.lineGenerator = lineGenerator;
+        
+        if(args != undefined)
+            this.args = args;
+        else
+            this.args = null;
     }
     
     computePoints(x,y,order){
@@ -38,7 +43,7 @@ class Surface{
         if(this.resolution == resolution)
             return this.points;
         this.resolution = resolution;
-        return this.computeSurface(resolution.x, resolution.y, resolution.order);
+        return this.computeSurface(resolution.x, resolution.y, this.args);
     }
     
     getSurfaceGeometry(resolution){
@@ -52,9 +57,8 @@ class Surface{
                 geom.faces.push( new THREE.Face3( i + l +  j*l, i + 1 + j*l, i + l + 1 + j*l ) );
             }
         }
-        for(var k in geom.faces){
-            geom.faces[k].normal.set(0, 0, 1);
-        }
+        
+        geom.computeVertexNormals();
         
         console.log(geom)
         return geom;

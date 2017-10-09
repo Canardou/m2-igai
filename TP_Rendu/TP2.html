@@ -20,42 +20,45 @@
         }
         </script>
         <script src="three.min.js"></script>
+        <script src="fps.js"></script>
         <script src="Line.js"></script>
         <script src="BSpline.js"></script>
+        <script src="BezierLine.js"></script>
         <script src="Surface.js"></script>
     </head>
     <body>
         <h1>Produit tensoriel</h1>
-        res : <input type="text" onchange="redraw('res',this.value)" value="10"></input> k : <input type="text" onchange="redraw('k',this.value)" value="3"></input> pointsToDraw : <input type="text" onchange="redraw('p',this.value)" value="50"></input>
-        
     </body>
 </html>
 <script>
     /*global THREE, BSpline, Surface*/
     var points = [[0, 0, 0,
                     0, 200, 0,
-                    0, 400, 0],
+                    0, 400, 0,
+                    0, 600, 0],
                     [200, 0, 0,
-                    200, 200, 0,
-                    0, 400, 0],
+                    200, 200, 400,
+                    200, 400, 400,
+                    200, 600, 0],
                     [400, 0, 0,
-                    400, 200, 300,
-                    0, 400, 0]];
+                    400, 200, 0,
+                    400, 400, 0,
+                    400, 600, 0]];
     var v3points = Surface.matrix(points.length,points[0].length/3);
     for(var i = 0; i < points.length; i++){
         for(var j = 0; j < points[i].length/3; j++)
             v3points[i][j] = new THREE.Vector3(points[i][j*3], points[i][j*3+1], points[i][j*3+2]);
     }
     
-    var res = {'x':10,'y':10,'order':3};
+    var res = {'x':10,'y':10};
     
-    var surface = new Surface(v3points,BSpline);
+    var surface = new Surface(v3points,BSpline,3);
     var geom = surface.getSurfaceGeometry(res);
     
     var scene = new THREE.Scene();
 
     var renderer = new THREE.WebGLRenderer();
-    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setSize(window.innerWidth/2, window.innerHeight/2);
     document.body.appendChild(renderer.domElement);
     
     var camera = new THREE.PerspectiveCamera(40, window.innerWidth / window.innerHeight, 1, 15000);
@@ -70,25 +73,39 @@
     var object = new THREE.Mesh( geom, material );
     
    scene.add(object);
+   
+   var pointsGeom = new THREE.Geometry();
+   for(var k in v3points){
+      for(var l in v3points[k]){
+         pointsGeom.vertices.push( v3points[k][l] );
+      }
+   }
+   
+   var object2 = new THREE.Points( pointsGeom, new THREE.PointsMaterial( { color: 0xFFFFFF } ));
+   
+   scene.add(object2);
+         
     
-    var mouseX = 0, mouseY = 0;
-    document.addEventListener('mousemove', function(event) {
-        mouseX = (event.clientX - window.innerWidth / 2) * 10;
-        mouseY = (event.clientY - window.innerHeight / 2) * 10;
-    }, false);
+    
+    var camControls = new THREE.FirstPersonControls( camera, renderer.domElement );
+    camControls.lookSpeed = 0.5;
+    camControls.movementSpeed = 50;
+    camControls.noFly = false;
+    camControls.lookVertical = true;
+    camControls.constrainVertical = false;
+    camControls.lon = -150;
+    camControls.lat = 120;
     
     
+    var clock = new THREE.Clock();
     
     (function animloop(){
       requestAnimationFrame(animloop);
+      camControls.update(clock.getDelta());
       render();
     })();
     
     function render(){
-        camera.position.x += ( mouseX - camera.position.x ) * .05;
-		camera.position.y += ( - mouseY - camera.position.y ) * .05;
-		camera.lookAt( scene.position );
-
 		renderer.render( scene, camera );
     }
 </script>

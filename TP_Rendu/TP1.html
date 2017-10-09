@@ -22,6 +22,7 @@
         <script src="three.min.js"></script>
         <script src="Line.js"></script>
         <script src="BSpline.js"></script>
+        <script src="BezierLine.js"></script>
     </head>
     <body>
         res : <input type="text" onchange="redraw('res',this.value)" value="10"></input> k : <input type="text" onchange="redraw('k',this.value)" value="3"></input> pointsToDraw : <input type="text" onchange="redraw('p',this.value)" value="50"></input>
@@ -48,7 +49,7 @@
         'p' : 50
     }
     
-    var line = new BSpline(v3points,values.k);
+    var line = new BezierLine(v3points,values.k);
     var geom = line.getGeometryCylinder(5,values.res,values.p);
     
     var scene = new THREE.Scene();
