@@ -1,6 +1,7 @@
 % Enonce
 h = [1 4 7; 2 5 8; 3 6 9];
 x = round(5*rand(7,7));
+hpad=padarray(h,(size(x)-size(h))./2);
 % a.
 a = conv2(double(h),double(x));
 % figure(1);
@@ -34,7 +35,7 @@ p2 = imfilter(x, h, 'conv', 'circular', 'same');
 % axis image;
 % d.
 center=(size(x)+1)/2;
-hpad1=circshift(padarray(h,(size(x)-size(h))./2), 1-center);
+hpad1=circshift(hpad, 1-center);
 
 S=fft2(hpad1);
 ConvCircFreq=ifft2(S.*fft2(x));
