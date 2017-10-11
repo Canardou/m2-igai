@@ -94,7 +94,6 @@ class Line {
         for(var i = length - resolution; i < length - 2; i++){
             geom.faces.push( new THREE.Face3( i, i+1, length-1 ));
         }
-        console.log(geom)
         geom.computeFaceNormals();
         return geom;
     }

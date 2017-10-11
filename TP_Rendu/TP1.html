@@ -26,11 +26,15 @@
     </head>
     <body>
         res : <input type="text" onchange="redraw('res',this.value)" value="10"></input> k : <input type="text" onchange="redraw('k',this.value)" value="3"></input> pointsToDraw : <input type="text" onchange="redraw('p',this.value)" value="50"></input>
-        
+        <select selected="BSpline" onchange="redraw('type',this.value)">>
+          <option value="BSpline">B-Spline</option>
+          <option value="BezierLine">Ligne Bezier</option>
+          <option value="Line">Interpolation lineaire</option>
+        </select>
     </body>
 </html>
 <script>
-    /*global THREE, BSpline*/
+    /*global THREE, BSpline, BezierLine, Line*/
     var points = [-200, 0, 0,
                     0, 0, -100,
                     0, 200, 0,
@@ -46,10 +50,11 @@
     var values = {
         'res' : 10,
         'k' : 3,
-        'p' : 50
+        'p' : 50,
+        'type' : BSpline
     }
     
-    var line = new BezierLine(v3points,values.k);
+    var line = new values.type(v3points,values.k);
     var geom = line.getGeometryCylinder(5,values.res,values.p);
     
     var scene = new THREE.Scene();
@@ -73,9 +78,22 @@
    
    function redraw(attribut,newValue){
         scene.remove(object);
-        values[attribut] = parseInt(newValue);
-        console.log(values)
-        var line = new BSpline(v3points,values.k);
+        if(attribut == 'type'){
+            switch(newValue){
+                case "BSpline":
+                    values.type=BSpline;
+                    break;
+                case "BezierLine":
+                    values.type=BezierLine;
+                    break;
+                case "Line":
+                    values.type=Line;
+                    break;
+            }
+        }
+        else
+            values[attribut] = parseInt(newValue);
+        var line = new values.type(v3points,values.k);
         var geom = line.getGeometryCylinder(5,values.res,values.p);
         object = new THREE.Mesh( geom, material );
         scene.add(object);
