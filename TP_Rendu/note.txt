@@ -1,0 +1,12 @@
+Au moins 1 de chaque matière - 4 au total
+
+
+-geom
+  -subdiv (loop triangle, catnull-clarck)
+  -simplification* : erreur quad
+    edge collapse
+    demi-arrête : arrête orientée dans un sens
+    OpenMesh ->  * face - arrête - vertex
+                / \
+               *---*
+  -surf implicite
