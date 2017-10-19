@@ -7,7 +7,7 @@ function H=homog(pg,pd)
         a(i)=norm([pg(1,i)-uk pg(2,i)-vk]);
     end
     ak = sqrt(2) / mean(mean(a));
-    Tg = [ak 0 -ak*uk;0 ak -ak*vk;0 0 1]
+    Tg = [ak 0 -ak*uk;0 ak -ak*vk;0 0 1];
     pg = [pg; ones(1,n)];
     pg = Tg*pg;
 
@@ -17,7 +17,7 @@ function H=homog(pg,pd)
         a(i)=norm([pd(1,i)-uk pd(2,i)-vk]);
     end
     ak = sqrt(2) / mean(mean(a));
-    Td = [ak 0 -ak*uk;0 ak -ak*vk;0 0 1]
+    Td = [ak 0 -ak*uk;0 ak -ak*vk;0 0 1];
     pd = [pd; ones(1,n)];
     pd = Td*pd;
     % estimation of h
@@ -31,7 +31,8 @@ function H=homog(pg,pd)
     end
     [V,M] = eig(D'*D);
     h = V(:,1);
-    H = reshape(h,3,3)'
+    H = reshape(h,3,3)';
+    %denormalization
     H = inv(Td)*H*Tg;
 end
 
