@@ -46,15 +46,19 @@ ConvCircFreq=ifft2(S.*fft2(x));
 % axis image;
 
 %3.e
-szx=size(x)
+szx=size(x);
 ConvCircBCCB=zeros(size(x));
-BCCB=[]
+BCCB=[];
+% pour chaque pixel de l'image on calcul le circshift qui permet d'avoir la
+% bonne combinaison linéaire de xi (image vectorisé)
+% cela nous permet de former la BCCB (et l'image pour verifier que notre
+% calcul est juste)
 for i=1:szx(1)
     for j=1:szx(2)
-        dcenter=(size(x)+1)/2-[i,j]
-        hpad2=circshift(rot90(hpad,2), -dcenter)
+        dcenter=(size(x)+1)/2-[i,j];
+        hpad2=circshift(rot90(hpad,2), -dcenter);
         ConvCircBCCB(i,j)=hpad2(:)'*x(:);
-        BCCB=[BCCB hpad2(:)]
+        BCCB=[BCCB hpad2(:)];
     end
 end
 

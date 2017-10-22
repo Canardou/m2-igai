@@ -1,34 +1,34 @@
+fe = 100;
+f0 = 20;
+f0norm = f0 / fe; % Normaliser
+N = 50;
+[h, n, h0] = rif(N, f0norm);
 
-% h(n) = 2*f0*sinc(2*pi*n*f0);
-
-% normalisation des frequences
-f0 = 20*10^3;
-fe = 100*10^3;
-fn = f0/fe; % frequence normalisee
-N = 0:0.01:1;
-Order = 128;
-coefs = rif(Order,fn/2);
-figure(1);
-plot(coefs)
-figure(2);
-g = abs(fftshift(fft(coefs,1024)));
-s = size(g(1024/2:end),2);
-plot((0:s-1)/s,g(1024/2:end)/0.08);
+subplot(1, 3, 1);
 hold on
-%-- design the bandpass filter --
-rect = 1*(N>=0 & N<fn);
-rect2= rect+0*(N>=fn);
-%-- plotting the ideal filter --%
-plot(N,rect2,'linewidth',2);
-title('bandpass ideal filter');
-xlabel('frequency'); ylabel('Magnitude')
-% axis([0 1 0 1.5])
-hold off;
-figure(3)
-plot(angle(fft(coefs)));
+plot(n, h);
+plot(n, h0, 'r+');
+hold off
+subplot(1, 3, 2);
+plot(linspace(-1/2, 1/2, 1024), abs(fftshift(fft(h,1024))));
+subplot(1, 3, 3);
 
-function c = rif(N,f0)
-    n = 1:N/2;
-    c = (0.54 - 0.46*cos(2*pi*n/N)) .* sin(2*pi*n*f0) ./ (pi*n);
-    c = [c(end:-1:1), 2*f0*0.08, c];
+% LA PHASE C'EST 'ANGLE'
+plot(linspace(-1/2, 1/2, 1024), unwrap(angle(fftshift(fft(h,1024)))));
+
+function [h, n, h0] = rif(N, f0)
+
+	% Fonction porte de rep. impulsionnelle:
+	n = (1:N/2);
+	h = sin(2*pi*(n)*f0) ./ (pi*n);
+	h0 = [h(end-1:-1:1) 2*f0 h];
+
+	% Windows
+       	h = h0 .* hamming(N)';
+	%h = h0 .* hanning(N)';
+
+	% Coefficients
+	n = [-1*n(end-1:-1:1) 0 n];
+
 end
+

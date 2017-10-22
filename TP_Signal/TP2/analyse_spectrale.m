@@ -7,8 +7,8 @@ t = (1:N)/fe;
 signal = exp(-2i*pi*f1*t) + exp(-2i*pi*f2*t);
 % SNRdB = 10 = 20 * log10( Ps / Pb )
 sigma = sqrt(2/(10^2));
-y=signal+sigma*randn(size(t));
-plot(real(y));
+y=real(signal+sigma*randn(size(t)));
+plot(y);
 % 2.
 figure;
 Nfft = 1024;
@@ -33,8 +33,10 @@ plot(pwelch(y,M,M/2));
 subplot(3,1,3);
 M = 250;
 plot(pwelch(y,M,M/2));
-% 4.
+%% 4.
 figure;
-p = 2;
+m = arburg(y,2);
+freqz(1,m);
+figure;
 m = arburg(y,10);
-plot(abs(m));
+freqz(1,m);
