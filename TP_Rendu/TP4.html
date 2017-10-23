@@ -21,145 +21,16 @@
         </script>
         <script src="three.min.js"></script>
         <script src="trackball.js"></script>
-        <script src="generateLookups.js"></script>
+        <script src="TP5/marching_cube.js"></script>
+        <script src="TP5/sphere_implicit.js"></script>
     </head>
     <body>
-        <h1>Loop Subdivision</h1>
-        subdivision : <input type="text" autocomplete=off onchange="changeSub(this.value)" value="2"></input>
-        <select selected="box" autocomplete=off onchange="changeGeometry(this.value)">>
-          <option value="box">Cube</option>
-          <option value="cone">Cone</option>
-          <option value="dodecahedron">Dodecahedron</option>
-          <option value="torus">Torus</option>
-        </select><input type="checkbox" autocomplete=off onchange="setWireframe(this.checked)" name="wireframe" value="wireframe">Wireframe<br>
+        <h1>Implicit Surface</h1>
     </body>
 </html>
 <script>
     
-    /*global THREE, BSpline, Surface*/
-    var current = "box";
-    var nbSubdivise = 2;
-    var wireframeBool = false;
-    var list_geometry = {"box" : new THREE.BoxGeometry( 1, 1, 1 ),
-                        "cone" : new THREE.ConeGeometry( 1, 1, 5 ),
-                        "dodecahedron" : new THREE.DodecahedronGeometry(1),
-                        "torus" : new THREE.TorusGeometry( 1, 0.25, 3, 5 )
-    }  
-                            
-    //var geometry = new THREE.ConeGeometry( 1, 1, 5 );
-    
-    
-    
-    function subdivise(geometry, sub){
-        geometry.faceVertexUvs = [];
-        sub = Math.min(Math.max(sub,0),7);
-        for(var boucle = 0; boucle < sub; boucle++){
-            var oldVertices = geometry.vertices; // { x, y, z}
-        	var oldFaces = geometry.faces; // { a: oldVertex1, b: oldVertex2, c: oldVertex3 }
-        
-        	// Generate edges Lookup
-        
-        	var edges = {}; // edge oldVertex1_oldVertex2 = { oldVertex1, oldVertex2, faces[]  }
-            var metaVertices = [];
-        
-        	generateLookups(oldVertices, oldFaces, metaVertices, edges);
-        	
-        	// new edges vertex
-        	/*
-        	    2 6
-        	     6 2
-        	*/
-        	
-        	var newEdgeVertices = [];
-        
-            for(var k in edges){
-                var edge = edges[k];
-                //R2, R3, R4
-                var vertexWeight = 6/16;
-                var adjVertexWeight = 2/16;
-                
-                var newVertex = new THREE.Vector3();
-                
-                newVertex.add(edge.a).multiplyScalar(vertexWeight);
-                newVertex.add(edge.b.clone().multiplyScalar(vertexWeight));
-                
-                for(var l in edge.faces){
-                    var face = edge.faces[l];
-                    
-                    // each vertex
-                    var letters = ['a','b','c'];
-                    
-                    for(var m in letters){
-                        var vertex = oldVertices[face[letters[m]]];
-                        if(vertex != edge.a && vertex != edge.b){
-                            newVertex.add(vertex.clone().multiplyScalar(adjVertexWeight));
-                        }
-                    }
-                }
-                edge.newIndex = newEdgeVertices.length+oldVertices.length;
-                newEdgeVertices.push(newVertex);
-            }
-            
-            //console.assert(newEdgeVertices.length == 18, "Edges vertex should count to 18");
-            
-            // Reposition already created vertex
-            /*
-                1  1  
-              1  10  1
-                1  1
-            */
-            var newSourceVertices = [];
-            for(var i = 0; i < oldVertices.length; i++){
-                var oldVertex = oldVertices[i];
-                
-                let edges = metaVertices[i].edges;
-                var n = edges.length;
-                
-                var alpha_n = Math.pow(3/8 + Math.cos(2*Math.PI/n)/4, 2)+3/8;
-                
-                var alpha = 1.7*alpha_n - 1;
-                var beta = (1-alpha)/n;
-                
-                let newVertex = oldVertex.clone().multiplyScalar(alpha);
-                for(var k in edges){
-                    newVertex.add(edges[k].clone().multiplyScalar(beta));
-                }
-                newSourceVertices.push(newVertex);
-            }
-            
-            //link source and edge -> 1 face = 4 new faces
-            var newFaces = [];
-            var newVertices = newSourceVertices.concat(newEdgeVertices);
-            for(var i = 0; i<oldFaces.length; i++){
-                var face = oldFaces[i];
-                
-                var d = getEdge( face.a, face.b, edges ).newIndex;
-                var e = getEdge( face.b, face.c, edges ).newIndex;
-                var f = getEdge( face.c, face.a, edges ).newIndex;
-                
-                /*
-                        a
-                       / \
-                      d---f
-                     / \ / \
-                    b---e---c 
-                */
-                newFaces.push(new THREE.Face3(d, e, f));
-                newFaces.push(new THREE.Face3(face.a, d, f));
-                newFaces.push(new THREE.Face3(face.b, e, d));
-                newFaces.push(new THREE.Face3(face.c, f, e));
-            }
-            
-            geometry.faces = newFaces;
-            geometry.vertices = newVertices;
-        }
-        geometry.computeVertexNormals();
-        return geometry;
-    }
-    
-    
-    var geometry = subdivise(list_geometry[current].clone(),nbSubdivise);
-    
+    /*global THREE, sphere*/
     var scene = new THREE.Scene();
 
     var renderer = new THREE.WebGLRenderer();
@@ -177,14 +48,7 @@
     	fragmentShader: document.getElementById( 'fragmentShader' ).textContent
     });
     
-    var object = new THREE.Mesh( geometry, material );
-    
-    var geo = new THREE.WireframeGeometry( geometry); // or WireframeGeometry
-    var mat = new THREE.LineBasicMaterial( { color: 0xffffff, linewidth: 2} );
-    var wireframe = new THREE.LineSegments( geo, mat );
-    
-   scene.add(object);
-        
+
     var camControls = new THREE.TrackballControls( camera );
 	camControls.rotateSpeed = 5.0;
 	camControls.zoomSpeed = 1.2;
@@ -195,47 +59,50 @@
 	camControls.dynamicDampingFactor = 0.3;
 	camControls.keys = [ 65, 83, 68 ];
 	camControls.addEventListener( 'change', render );
-    
-    
-    function changeGeometry(geo){
-        current = geo;
-        redraw();
-    }
-    
-    function changeSub(k){
-        nbSubdivise = parseInt(k);
-        redraw();
-    }
-    
-    function setWireframe(bool){
-        wireframeBool = bool;
-        if(wireframeBool){
-            scene.remove(wireframe);
-            scene.add( wireframe );
+	
+	var spheres = [];
+	for(var i = 0; i < 1; i++){
+	    spheres.push(new sphere(Math.random()-0.5,Math.random()-0.5,Math.random()-0.5,1/5));
+	}
+	
+	var inside = new THREE.Geometry();
+	var outside = new THREE.Geometry();
+	
+	const cube = [[0, 0, 0],
+	              [1, 0, 0],
+	              [0, 1, 0],
+	              [0, 0, 1],
+	              [1, 1, 0],
+	              [0, 1, 1],
+	              [1, 0, 1],
+	              [1, 1, 1]];
+    const res = 10;
+    for ( var x = -res; x < res; x ++ ) {
+        for ( var y = -res; y < res; y ++ ) {
+            for ( var z = -res; z < res; z ++ ) {
+                var vect = new THREE.Vector3(x/res,y/res,z/res);
+                var bitwise = 0;
+                for(var c = 0; c < cube.length; c++){
+                    var value = 0;
+                    for(var k in spheres){
+                        value += spheres[k].distance(x/res+cube[c][0]/res,y/res+cube[c][1]/res,z/res+cube[c][2]/res);
+                    }
+                    if(value>0.5)
+                        bitwise |= (1 << c);
+                }
+            }
         }
-        else
-            scene.remove(wireframe);
     }
+
+    var outsideMat = new THREE.PointsMaterial( { size:0.1/res, color: 0x555555 } );
+    var insideMat = new THREE.PointsMaterial( { size:1/res, color: 0x55FF55 } );
     
-    function redraw(){
-        scene.remove(object);
-        scene.remove(wireframe);
-        
-        var geometry = subdivise(list_geometry[current].clone(),nbSubdivise);
-        object = new THREE.Mesh( geometry, material );
-        
- 
-        var geo = new THREE.WireframeGeometry( geometry); // or WireframeGeometry
-        var mat = new THREE.LineBasicMaterial( { color: 0xffffff, linewidth: 2} );
-        wireframe = new THREE.LineSegments( geo, mat );
-        
-        if(wireframeBool){
-            scene.add( wireframe );
-        }
-        
-        scene.add(object);
-    }
+    var insideObj = new THREE.Points( inside, insideMat );
+    var outsideObj = new THREE.Points( outside, outsideMat );
     
+    scene.add( insideObj );
+    scene.add( outsideObj );
+	
     
     var clock = new THREE.Clock();
     
