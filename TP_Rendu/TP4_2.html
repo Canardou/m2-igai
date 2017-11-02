@@ -66,8 +66,6 @@
 	}
 	
 	var surface = new THREE.Geometry();
-	var vertices = [];
-	var faces = [];
 	
 	const cube = [[0, 0, 0],
 	              [1, 0, 0],
@@ -90,69 +88,76 @@
 	              [1, 0, 0.5],
 	              [1, 1, 0.5],
 	              [0, 1, 0.5]];
+	              
     const res = 10;
-    var dec = 0;
     
-    var starsGeometry = new THREE.Geometry();
-    
-    for ( var x = -res; x < res + 1; x ++ ) {
-        for ( var y = -res; y < res + 1; y ++ ) {
-            for ( var z = -res; z < res + 1; z ++ ) {
-                var bitwise = 0;
-                for(var c = 0; c < cube.length; c++){
-                    var value = 0;
-                    for(var k in spheres){
-                        value += spheres[k].distance(x/res+cube[c][0]/res,y/res+cube[c][1]/res,z/res+cube[c][2]/res);
+    function marchingcube(){
+        var dec = 0;
+        
+        var vertices = [];
+    	var faces = [];
+        
+        for ( var x = -res; x < res + 1; x ++ ) {
+            for ( var y = -res; y < res + 1; y ++ ) {
+                for ( var z = -res; z < res + 1; z ++ ) {
+                    var bitwise = 0;
+                    for(var c = 0; c < cube.length; c++){
+                        var value = 0;
+                        for(var k in spheres){
+                            value += spheres[k].distance(x/res+cube[c][0]/res,y/res+cube[c][1]/res,z/res+cube[c][2]/res);
+                        }
+                        if(value<0.5){
+                            bitwise |= (1 << c);
+                        }
                     }
-                    if(value<0.5){
-                        bitwise |= (1 << c);
+                    //treat bitwise
+                    if(bitwise > 0 && bitwise < 255){
+                        for(var c = 0; c < edges.length; c++){
+                            vertices.push(new THREE.Vector3(x/res+edges[c][0]/res,y/res+edges[c][1]/res,z/res+edges[c][2]/res));
+                        }
+                        var i = 0;
+                        while ( THREE.triTable[bitwise][i] != -1 && i<16 ) {
+                            faces.push(new THREE.Face3(THREE.triTable[bitwise][i]+dec, THREE.triTable[bitwise][i+1]+dec, THREE.triTable[bitwise][i+2]+dec));
+                    		i += 3;
+                    	}
+                    	dec += 12;
                     }
-                    else
-                        starsGeometry.vertices.push( new THREE.Vector3(x/res+cube[c][0]/res,y/res+cube[c][1]/res,z/res+cube[c][2]/res));
-                }
-                //treat bitwise
-                if(bitwise > 0 && bitwise < 255){
-                    for(var c = 0; c < edges.length; c++){
-                        vertices.push(new THREE.Vector3(x/res+edges[c][0]/res,y/res+edges[c][1]/res,z/res+edges[c][2]/res));
-                    }
-                    var i = 0;
-                    while ( THREE.triTable[bitwise][i] != -1 && i<16 ) {
-                        faces.push(new THREE.Face3(THREE.triTable[bitwise][i]+dec, THREE.triTable[bitwise][i+1]+dec, THREE.triTable[bitwise][i+2]+dec));
-                		i += 3;
-                	}
-                	dec += 12;
                 }
             }
         }
+        
+        surface.vertices =  vertices;
+        surface.faces = faces;
+        surface.computeFaceNormals();
     }
     
-    surface.vertices = surface.vertices.concat(vertices);
-    surface.faces = surface.faces.concat(faces);
-    surface.computeFaceNormals();
-    
-    console.log(surface);
+    marchingcube();
     
     var material = new THREE.ShaderMaterial({
     	vertexShader: document.getElementById( 'vertexShader' ).textContent,
-    	fragmentShader: document.getElementById( 'fragmentShader' ).textContent,
-    	side:THREE.DoubleSide 
+    	fragmentShader: document.getElementById( 'fragmentShader' ).textContent
     });
     
-    var starsMaterial = new THREE.PointsMaterial( { color: 0x22cc22, size: 0.1 } );
-    var object = new THREE.Points( starsGeometry, starsMaterial );
-    
-    var object2 = new THREE.Mesh( surface, material );
-    
+    var object = new THREE.Mesh( surface, material );
     scene.add(object);
-    scene.add(object2);
 	
+	function updateSphere(time){
+	    surface.elementsNeedUpdate = true;
+	    for(var k in spheres){
+	        spheres[k].x = spheres[k].initial_x + Math.cos(k/3 * time)/2;
+	        spheres[k].y = spheres[k].initial_y + Math.sin(k/5 * time/3)/2;
+	        spheres[k].z = spheres[k].initial_z + Math.cos(k/4 * time/5)/2;
+	    }
+	    marchingcube();
+	}
     
     var clock = new THREE.Clock();
     
     (function animloop(){
-      requestAnimationFrame(animloop);
       camControls.update(clock.getDelta());
+      updateSphere(clock.getElapsedTime());
       render();
+      requestAnimationFrame(animloop);
     })();
     
     function render(){

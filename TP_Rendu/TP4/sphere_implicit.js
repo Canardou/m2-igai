@@ -3,6 +3,9 @@ class sphere{
         this.x = x; 
         this.y = y;
         this.z = z;
+        this.initial_x = x;
+        this.initial_y = y;
+        this.initial_z = z;
         this.r = r;
     }
     
