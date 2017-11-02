@@ -89,6 +89,19 @@
 	              [1, 1, 0.5],
 	              [0, 1, 0.5]];
 	              
+	const interpol = [[0, 1],
+	              [1, 2],
+	              [2, 3],
+	              [3, 0],
+	              [4, 5],
+	              [5, 6],
+	              [6, 7],
+	              [7, 4],
+	              [0, 4],
+	              [1, 5],
+	              [2, 6],
+	              [3, 7]];
+	              
     const res = 10;
     
     function marchingcube(){
@@ -96,6 +109,8 @@
         
         var vertices = [];
     	var faces = [];
+    	
+    	var gridValues = [];
         
         for ( var x = -res; x < res + 1; x ++ ) {
             for ( var y = -res; y < res + 1; y ++ ) {
@@ -106,21 +121,31 @@
                         for(var k in spheres){
                             value += spheres[k].distance(x/res+cube[c][0]/res,y/res+cube[c][1]/res,z/res+cube[c][2]/res);
                         }
+                        gridValues[c] = value;
                         if(value<0.5){
                             bitwise |= (1 << c);
                         }
                     }
                     //treat bitwise
+                    var add = 12;
                     if(bitwise > 0 && bitwise < 255){
                         for(var c = 0; c < edges.length; c++){
-                            vertices.push(new THREE.Vector3(x/res+edges[c][0]/res,y/res+edges[c][1]/res,z/res+edges[c][2]/res));
+                            if((THREE.edgeTable[bitwise] & 1 << c) > 0){
+                                var vect1 = new THREE.Vector3(x/res+cube[interpol[c][0]][0]/res,y/res+cube[interpol[c][0]][1]/res,z/res+cube[interpol[c][0]][2]/res)
+                                var vect2 = new THREE.Vector3(x/res+cube[interpol[c][1]][0]/res,y/res+cube[interpol[c][1]][1]/res,z/res+cube[interpol[c][1]][2]/res)
+                                var factor = (0.5 - gridValues[interpol[c][0]])/(gridValues[interpol[c][1]] - gridValues[interpol[c][0]]);
+                                var vect = vect1.add(vect2.sub(vect1).multiplyScalar(factor));
+                                vertices.push(vect);
+                            }
+                            else
+                                vertices.push(new THREE.Vector3());
                         }
                         var i = 0;
                         while ( THREE.triTable[bitwise][i] != -1 && i<16 ) {
                             faces.push(new THREE.Face3(THREE.triTable[bitwise][i]+dec, THREE.triTable[bitwise][i+1]+dec, THREE.triTable[bitwise][i+2]+dec));
                     		i += 3;
                     	}
-                    	dec += 12;
+                    	dec += add;
                     }
                 }
             }
