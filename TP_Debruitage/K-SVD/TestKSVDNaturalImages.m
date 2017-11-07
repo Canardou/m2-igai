@@ -20,7 +20,7 @@ ImNames={'house'}; %{'lena','barbara','boats','house','peppers256'};
 for j=1:length(ImNames)
     % Load image
     ImName=ImNames{j}
-    I=imread(['.\images\',ImName,'.png']);
+    I=imread(['images/',ImName,'.png']);
     I=double(I);
     X=im2col(I,[n,n],'sliding');
     SigmaVec=5;

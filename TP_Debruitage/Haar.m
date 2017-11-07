@@ -1,4 +1,4 @@
-x = double(imread('images/boats.png'));
+x = double(imread('K-SVD/images/boats.png'));
 % imagesc(x);
 % colormap(gray);
 % axis image;
