@@ -10,6 +10,6 @@ class sphere{
     }
     
     distance(x,y,z){
-        return Math.max(1 - ((x - this.x)*(x - this.x) + (y - this.y)*(y - this.y) + (z - this.z)*(z - this.z))/this.r, 0);
+        return Math.min(Math.max(1 - ((x - this.x)*(x - this.x) + (y - this.y)*(y - this.y) + (z - this.z)*(z - this.z))/this.r, 0),1);
     }
 }
