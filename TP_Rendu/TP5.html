@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <script id="vertexShader" type="x-shader/x-vertex">
+        varying vec2 vUv;
+        varying vec3 vNormal;
+        
+        void main() {
+            vNormal = normal;
+            vUv = uv;
+            gl_Position =   projectionMatrix * 
+                            modelViewMatrix * 
+                            vec4(position,1.0);
+        }
+        </script>
+        <script id="fragmentShader" type="x-shader/x-fragment">
+        varying vec2 vUv;
+        varying vec3 vNormal;
+        
+        uniform sampler2D texture;
+        
+        void main() {
+            gl_FragColor = texture2D(texture, vUv)*vec4(vNormal*.5+.5,1.0);
+        }
+        </script>
+        <script src="three.min.js"></script>
+        <script src="trackball.js"></script>
+        <script src="TP5/CopyShader.js"></script>
+        <script src="TP5/ShaderPass.js"></script>
+        <script src="TP5/EffectComposer.js"></script>
+        <script src="TP5/RenderPass.js"></script>
+        <script src="TP5/FXAAPass.js"></script>
+    </head>
+    <body>
+        <h1>FXAA</h1>
+        <input type="checkbox" autocomplete=off onchange="setFxaa(this.checked)" name="fxaa" value="fxaa">FXAA<br>
+    </body>
+</html>
+<script>
+    function setFxaa(bool){
+        fxaaPass.active = bool;
+    }
+    
+    /*global THREE, sphere*/
+    var scene = new THREE.Scene();
+
+    var renderer = new THREE.WebGLRenderer();
+
+    renderer.setSize(screen.width/2, screen.height/2);
+    
+    document.body.appendChild(renderer.domElement);
+    
+    var camera = new THREE.PerspectiveCamera(40, screen.width / screen.height, 0.1, 15000);
+    camera.position.set(0, 0, 10);
+    camera.lookAt(new THREE.Vector3(0, 0, 0));
+    
+
+    var camControls = new THREE.TrackballControls( camera );
+	camControls.rotateSpeed = 5.0;
+	camControls.zoomSpeed = 1.2;
+	camControls.panSpeed = 0.8;
+	camControls.noZoom = false;
+	camControls.noPan = false;
+	camControls.staticMoving = true;
+	camControls.dynamicDampingFactor = 0.3;
+	camControls.keys = [ 65, 83, 68 ];
+	camControls.addEventListener( 'change', render );
+    
+    var material = new THREE.ShaderMaterial({
+    	vertexShader: document.getElementById( 'vertexShader' ).textContent,
+    	fragmentShader: document.getElementById( 'fragmentShader' ).textContent,
+    	uniforms: {
+            texture: { type: "t", value: new THREE.TextureLoader().load('crate.jpg') }
+        }
+    });
+    
+    var box =  new THREE.BoxGeometry( 2, 2, 2 );
+    var object = new THREE.Mesh( box, material );
+    scene.add(object);
+    
+    var composer = new THREE.EffectComposer( renderer );
+	composer.addPass( new THREE.RenderPass( scene, camera ) );
+
+	var fxaaPass = new THREE.FXAAPass();
+	fxaaPass.renderToScreen = true;
+	composer.addPass( fxaaPass );
+	
+    var clock = new THREE.Clock();
+    
+    (function animloop(){
+      camControls.update(clock.getDelta());
+      composer.render();
+      requestAnimationFrame(animloop);
+    })();
+    
+    
+    function render(){
+		renderer.render( scene, camera );
+    }
+</script>

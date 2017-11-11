@@ -24,6 +24,7 @@
         <script src="TP4/marching_cube.js"></script>
         <script src="TP4/sphere_implicit.js"></script>
         <script src="TP4/plan_implicit.js"></script>
+        <script src='subdivise.js'></script>
     </head>
     <body>
         <h1>Implicit Surface</h1>
@@ -109,7 +110,7 @@
 	              [2, 6],
 	              [3, 7]];
 	              
-    const res = 10;
+    const res = 15;
     
     function interpolate(x,y,z,c,vertices,gridValues, interpolations){
         var x1 = Math.max(x+cube[interpol[c][0]][0],x+cube[interpol[c][1]][0]);
@@ -133,24 +134,40 @@
         }
     }
     
+    function calculateGrid(x,y,z,res,grid,objects){
+        //Slower
+        /*if(grid[x+"_"+y+"_"+z]==undefined){
+            var value = 0;
+            for(var k in objects){
+                value += spheres[k].distance(x/res,y/res,z/res);
+            }
+            grid[x+"_"+y+"_"+z] = value;
+            return value;
+        }
+        else
+            return grid[x+"_"+y+"_"+z];*/
+        var value = 0;
+        for(var k in objects){
+            value += spheres[k].distance(x/res,y/res,z/res);
+        }
+        return value;
+    }
+    
     function marchingcube(){
         var vertices = [];
     	var faces = [];
     	var interpolations = {};
+    	var gridValues = {};
     	
-    	var gridValues = [];
+    	var values = [];
         
         for ( var x = -res; x < res; x ++ ) {
             for ( var y = -res; y < res; y ++ ) {
                 for ( var z = -res; z < res; z ++ ) {
                     var bitwise = 0;
                     for(var c = 0; c < cube.length; c++){
-                        var value = 0;
-                        for(var k in spheres){
-                            value += spheres[k].distance(x/res+cube[c][0]/res,y/res+cube[c][1]/res,z/res+cube[c][2]/res);
-                        }
-                        gridValues[c] = value;
-                        if(value<seuil){
+                        values[c] = calculateGrid(x+cube[c][0],y+cube[c][1],z+cube[c][2],res,gridValues,spheres);
+                        if(values[c]<seuil){
                             bitwise |= (1 << c);
                         }
                     }
@@ -160,7 +177,7 @@
                         
                         for(var c = 0; c < edges.length; c++){
                             if((THREE.edgeTable[bitwise] & 1 << c) > 0)
-                                vect[c] = interpolate(x,y,z,c,vertices,gridValues, interpolations);
+                                vect[c] = interpolate(x,y,z,c,vertices,values,interpolations);
                         }
                         var i = 0;
                         while ( THREE.triTable[bitwise][i] != -1 && i<16 ) {
