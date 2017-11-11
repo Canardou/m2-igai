@@ -1,7 +1,7 @@
 /**
  * based on http://blog.simonrodriguez.fr/articles/30-07-2016_implementing_fxaa.html
  */
-THREE.SepiaShader = {
+THREE.FXAAShader = {
 	uniforms: {
 		"screenTexture": { value: null },
 		"width": { value: 640 },
@@ -23,29 +23,40 @@ THREE.SepiaShader = {
 		"varying vec2 vUv;",
 		"vec2 inverseScreenSize;",
 		
+		"const float FXAA_EDGE_THRESHOLD = 1.0/8.0;",
+		"const float FXAA_EDGE_THRESHOLD_MIN = 1.0/16.0;",
+		"const float FXAA_SUBPIX_TRIM = 1.0/4.0;",
+		"const float FXAA_SUBPIX_CAP = 3.0/4.0;",
+		"const int FXAA_SEARCH_STEPS = 12;",
+		"const float FXAA_SEARCH_ACCELERATION = 2.0;",
+		
 		"float rgb2luma(vec3 rgb){",
-		    "return sqrt(dot(rgb, vec3(0.299, 0.587, 0.114)));",
+		    "return rgb.y * (0.587/0.299) + rgb.x;",
 		"}",
 		"void main() {",
 			"if(byp>0) {",
+				"if(byp==8){",
+					"gl_FragColor = vec4(vec3(rgb2luma(texture2D(screenTexture, vUv).rgb)),1.0);",
+				    "return;",
+				"}",
 				"inverseScreenSize = vec2(1.0/width, 1.0/height);",
 				"vec3 colorCenter = texture2D(screenTexture,vUv).rgb;",
-				"float lumaCenter = rgb2luma(colorCenter);",
+				"float lumaM = rgb2luma(colorCenter);",
 				// Luma at the four direct neighbours of the current fragment.
-				"float lumaDown = rgb2luma(texture2D(screenTexture,vUv+vec2(0.0,-1.0)*inverseScreenSize).rgb);",
-				"float lumaUp = rgb2luma(texture2D(screenTexture,vUv+vec2(0.0,1.0)*inverseScreenSize).rgb);",
-				"float lumaLeft = rgb2luma(texture2D(screenTexture,vUv+vec2(-1.0,0.0)*inverseScreenSize).rgb);",
-				"float lumaRight = rgb2luma(texture2D(screenTexture,vUv+vec2(1.0,0.0)*inverseScreenSize).rgb);",
+				"float lumaN = rgb2luma(texture2D(screenTexture,vUv+vec2(0.0,-1.0)*inverseScreenSize).rgb);",
+				"float lumaS = rgb2luma(texture2D(screenTexture,vUv+vec2(0.0,1.0)*inverseScreenSize).rgb);",
+				"float lumaW = rgb2luma(texture2D(screenTexture,vUv+vec2(-1.0,0.0)*inverseScreenSize).rgb);",
+				"float lumaE = rgb2luma(texture2D(screenTexture,vUv+vec2(1.0,0.0)*inverseScreenSize).rgb);",
 				
 				// Find the maximum and minimum luma around the current fragment.
-				"float lumaMin = min(lumaCenter,min(min(lumaDown,lumaUp),min(lumaLeft,lumaRight)));",
-				"float lumaMax = max(lumaCenter,max(max(lumaDown,lumaUp),max(lumaLeft,lumaRight)));",
+				"float rangeMin = min(lumaM,min(min(lumaN,lumaS),min(lumaW,lumaE)));",
+				"float rangeMax = max(lumaM,max(max(lumaN,lumaS),max(lumaW,lumaE)));",
 				
 				// Compute the delta.
-				"float lumaRange = lumaMax - lumaMin;",
+				"float range = rangeMax - rangeMin;",
 				
 				// If the luma variation is lower that a threshold (or if we are in a really dark area), we are not on an edge, don't perform any AA.
-				"if(lumaRange < max(0.0312,lumaMax*0.125)){",
+				"if(range < max(FXAA_EDGE_THRESHOLD_MIN,rangeMax*FXAA_EDGE_THRESHOLD)){",
 				    "gl_FragColor = texture2D (screenTexture, vUv);",
 				    "return;",
 				"} else if (byp == 1) {",
@@ -54,26 +65,26 @@ THREE.SepiaShader = {
 				"}",
 				
 				
-				"float lumaDownLeft = rgb2luma(texture2D(screenTexture,vUv+vec2(-1.0,-1.0)*inverseScreenSize).rgb);",
-				"float lumaUpRight = rgb2luma(texture2D(screenTexture,vUv+vec2(1.0,1.0)*inverseScreenSize).rgb);",
-				"float lumaUpLeft = rgb2luma(texture2D(screenTexture,vUv+vec2(-1.0,1.0)*inverseScreenSize).rgb);",
-				"float lumaDownRight = rgb2luma(texture2D(screenTexture,vUv+vec2(1.0,-1.0)*inverseScreenSize).rgb);",
+				"float lumaNW = rgb2luma(texture2D(screenTexture,vUv+vec2(-1.0,-1.0)*inverseScreenSize).rgb);",
+				"float lumaSE = rgb2luma(texture2D(screenTexture,vUv+vec2(1.0,1.0)*inverseScreenSize).rgb);",
+				"float lumaSW = rgb2luma(texture2D(screenTexture,vUv+vec2(-1.0,1.0)*inverseScreenSize).rgb);",
+				"float lumaNE = rgb2luma(texture2D(screenTexture,vUv+vec2(1.0,-1.0)*inverseScreenSize).rgb);",
 				
-				"float lumaDownUp = lumaDown + lumaUp;",
-				"float lumaLeftRight = lumaLeft + lumaRight;",
+				"float lumaVert = lumaN + lumaS;",
+				"float lumaHori = lumaW + lumaE;",
 				
 				// Same for corners
-				"float lumaLeftCorners = lumaDownLeft + lumaUpLeft;",
-				"float lumaDownCorners = lumaDownLeft + lumaDownRight;",
-				"float lumaRightCorners = lumaDownRight + lumaUpRight;",
-				"float lumaUpCorners = lumaUpRight + lumaUpLeft;",
+				"float lumaWCorners = lumaNW + lumaSW;",
+				"float lumaNCorners = lumaNW + lumaNE;",
+				"float lumaECorners = lumaNE + lumaSE;",
+				"float lumaSCorners = lumaSE + lumaSW;",
 				
 				// Compute an estimation of the gradient along the horizontal and vertical axis.
-				"float edgeHorizontal =  abs(-2.0 * lumaLeft + lumaLeftCorners)  + abs(-2.0 * lumaCenter + lumaDownUp ) * 2.0    + abs(-2.0 * lumaRight + lumaRightCorners);",
-				"float edgeVertical =    abs(-2.0 * lumaUp + lumaUpCorners)      + abs(-2.0 * lumaCenter + lumaLeftRight) * 2.0  + abs(-2.0 * lumaDown + lumaDownCorners);",
+				"float edgeVert = abs((0.25 * lumaNW) + (-0.5 * lumaN) + (0.25 * lumaNE)) + abs((0.50 * lumaW ) + (-1.0 * lumaM) + (0.50 * lumaE )) + abs((0.25 * lumaSW) + (-0.5 * lumaS) + (0.25 * lumaSE));",
+				"float edgeHorz = abs((0.25 * lumaNW) + (-0.5 * lumaW) + (0.25 * lumaSW)) + abs((0.50 * lumaN ) + (-1.0 * lumaM) + (0.50 * lumaS )) + abs((0.25 * lumaNE) + (-0.5 * lumaE) + (0.25 * lumaSE));",
 				
 				// Is the local edge horizontal or vertical ?
-				"bool isHorizontal = (edgeHorizontal >= edgeVertical);",
+				"bool isHorizontal = edgeHorz >= edgeVert;",
 				
 				"if (isHorizontal && byp == 2) {",
 					"gl_FragColor = vec4(1.0, 1.0, 0.0, 1.0);",
@@ -84,12 +95,12 @@ THREE.SepiaShader = {
 				"}",
 				
 				// Select the two neighboring texels lumas in the opposite direction to the local edge.
-				"float luma1 = isHorizontal ? lumaDown : lumaLeft;",
-				"float luma2 = isHorizontal ? lumaUp : lumaRight;",
+				"float luma1 = isHorizontal ? lumaN : lumaW;",
+				"float luma2 = isHorizontal ? lumaS : lumaE;",
 				
 				// Compute gradients in this direction.
-				"float gradient1 = luma1 - lumaCenter;",
-				"float gradient2 = luma2 - lumaCenter;",
+				"float gradient1 = luma1 - lumaM;",
+				"float gradient2 = luma2 - lumaM;",
 				
 				// Which direction is the steepest ?
 				"bool is1Steepest = abs(gradient1) >= abs(gradient2);",
@@ -114,9 +125,9 @@ THREE.SepiaShader = {
 				"if(is1Steepest){",
 				    // Switch the direction
 				    "stepLength = - stepLength;",
-				    "lumaLocalAverage = 0.5*(luma1 + lumaCenter);",
+				    "lumaLocalAverage = 0.5*(luma1 + lumaM);",
 				"} else {",
-				    "lumaLocalAverage = 0.5*(luma2 + lumaCenter);",
+				    "lumaLocalAverage = 0.5*(luma2 + lumaM);",
 				"}",
 				
 				// Shift UV in the correct direction by half a pixel.
@@ -156,7 +167,7 @@ THREE.SepiaShader = {
 				// If both sides have not been reached, continue to explore.
 				"if(!reachedBoth){",
 				
-				    "for(int i = 2; i < 12; i++){",
+				    "for(int i = 2; i < FXAA_SEARCH_STEPS; i++){",
 				        // If needed, read luma in 1st direction, compute delta.
 				        "if(!reached1){",
 				            "lumaEnd1 = rgb2luma(texture2D(screenTexture, uv1).rgb);",
@@ -174,10 +185,10 @@ THREE.SepiaShader = {
 				
 				        // If the side is not reached, we continue to explore in this direction, with a variable quality.
 				        "if(!reached1){",
-				            "uv1 -= offset * 2.0;",
+				            "uv1 -= offset * FXAA_SEARCH_ACCELERATION;",
 				        "}",
 				        "if(!reached2){",
-				            "uv2 += offset * 2.0;",
+				            "uv2 += offset * FXAA_SEARCH_ACCELERATION;",
 				        "}",
 				
 				        // If both sides have been reached, stop the exploration.
@@ -223,23 +234,20 @@ THREE.SepiaShader = {
 				"float pixelOffset = - distanceFinal / edgeThickness + 0.5;",
 				
 				// Is the luma at center smaller than the local average ?
-				"bool isLumaCenterSmaller = lumaCenter < lumaLocalAverage;",
+				"bool islumaMSmaller = lumaM < lumaLocalAverage;",
 				
 				// If the luma at center is smaller than at its neighbour, the delta luma at each end should be positive (same variation).
 				// (in the direction of the closer side of the edge.)
-				"bool correctVariation = ((isDirection1 ? lumaEnd1 : lumaEnd2) < 0.0) != isLumaCenterSmaller;",
+				"bool correctVariation = ((isDirection1 ? lumaEnd1 : lumaEnd2) < 0.0) != islumaMSmaller;",
 				
 				// If the luma variation is incorrect, do not offset.
 				"float finalOffset = correctVariation ? pixelOffset : 0.0;",
 				
 				// Sub-pixel shifting
 				// Full weighted average of the luma over the 3x3 neighborhood.
-				"float lumaAverage = (1.0/12.0) * (2.0 * (lumaDownUp + lumaLeftRight) + lumaLeftCorners + lumaRightCorners);",
+				"float lumaAverage = (1.0/9.0) * (lumaHori + lumaVert + lumaWCorners + lumaECorners);",
 				// Ratio of the delta between the global average and the center luma, over the luma range in the 3x3 neighborhood.
-				"float subPixelOffset1 = clamp(abs(lumaAverage - lumaCenter)/lumaRange,0.0,1.0);",
-				"float subPixelOffset2 = (-2.0 * subPixelOffset1 + 3.0) * subPixelOffset1 * subPixelOffset1;",
-				// Compute a sub-pixel offset based on this delta.
-				"float subPixelOffsetFinal = subPixelOffset2 * subPixelOffset2 * 0.75;",
+				"float subPixelOffsetFinal = clamp(abs(lumaAverage - lumaM)/range - FXAA_SUBPIX_TRIM,0.0,FXAA_SUBPIX_CAP);",
 				
 				"if (finalOffset>subPixelOffsetFinal && byp == 6) {",
 					"gl_FragColor = vec4(1.0, 0.0, 0.2, 1.0);",
@@ -276,7 +284,7 @@ THREE.FXAAPass = function ( dt_size ) {
 
 	THREE.Pass.call( this );
 	
-	var shader = THREE.SepiaShader;
+	var shader = THREE.FXAAShader;
 	this.uniforms = THREE.UniformsUtils.clone( shader.uniforms );
 
 	this.material = new THREE.ShaderMaterial( {

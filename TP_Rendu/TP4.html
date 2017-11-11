@@ -28,7 +28,8 @@
     </head>
     <body>
         <h1>Implicit Surface</h1>
-        Seuil <input type=range min=0.02 value=0 max=2 step=0.02 onchange="changeSeuil(this.value)" value="0.5"><span id=value>0.5</span><br>
+        Seuil <input type=range min=0.02 value=0 max=2 step=0.02 onchange="changeSeuil(this.value)" value="0.5"><span id=value>0.5</span><br>Res<input type="text" autocomplete=off onchange="changeRes(this.value)" value="12"></input><br>
+        <div id="scene"></div>
     </body>
 </html>
 <script>
@@ -38,6 +39,11 @@
         document.getElementById("value").innerHTML = seuil;
     }
     
+    var res = 12;
+    function changeRes(value){
+        res = parseInt(value);
+    }
+    
     /*global THREE, sphere*/
     var scene = new THREE.Scene();
 
@@ -45,7 +51,7 @@
 
     renderer.setSize(screen.width/2, screen.height/2);
     
-    document.body.appendChild(renderer.domElement);
+    document.getElementById("scene").appendChild(renderer.domElement);
     
     var camera = new THREE.PerspectiveCamera(40, screen.width / screen.height, 0.1, 15000);
     camera.position.set(0, 0, 10);
@@ -109,8 +115,6 @@
 	              [1, 5],
 	              [2, 6],
 	              [3, 7]];
-	              
-    const res = 15;
     
     function interpolate(x,y,z,c,vertices,gridValues, interpolations){
         var x1 = Math.max(x+cube[interpol[c][0]][0],x+cube[interpol[c][1]][0]);
@@ -148,7 +152,7 @@
             return grid[x+"_"+y+"_"+z];*/
         var value = 0;
         for(var k in objects){
-            value += spheres[k].distance(x/res,y/res,z/res);
+            value += objects[k].distance(x/res,y/res,z/res);
         }
         return value;
     }

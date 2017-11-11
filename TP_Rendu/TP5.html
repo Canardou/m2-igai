@@ -41,7 +41,9 @@
           <option value="5">FXAA_DEBUG_OFFSET</option>
           <option value="6">FXAA_DEBUG_LOWPASS</option>
           <option value="7">FXAA</option>
+          <option value="8">FXAA_DEBUG_LUMA</option>
         </select><input type="checkbox" autocomplete=off checked=true onchange="setFxaa(this.checked)" name="fxaa" value="fxaa">FXAA<br>
+        <div id="scene"></div>
     </body>
 </html>
 <script>
@@ -60,7 +62,7 @@
 
     renderer.setSize(screen.width/2, screen.height/2);
     
-    document.body.appendChild(renderer.domElement);
+    document.getElementById("scene").appendChild(renderer.domElement);
     
     var camera = new THREE.PerspectiveCamera(40, screen.width / screen.height, 0.1, 15000);
     camera.position.set(0, 0, 10);
