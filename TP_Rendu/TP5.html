@@ -33,12 +33,24 @@
     </head>
     <body>
         <h1>FXAA</h1>
-        <input type="checkbox" autocomplete=off onchange="setFxaa(this.checked)" name="fxaa" value="fxaa">FXAA<br>
+        <select selected="7" autocomplete=off onchange="changeStep(this.value)">>
+          <option value="1">FXAA_DEBUG_PASSTHROUGH</option>
+          <option value="2">FXAA_DEBUG_HORZVERT</option>
+          <option value="3">FXAA_DEBUG_PAIR</option>
+          <option value="4">FXAA_DEBUG_NEGPOS</option>
+          <option value="5">FXAA_DEBUG_OFFSET</option>
+          <option value="6">FXAA_DEBUG_LOWPASS</option>
+          <option value="7">FXAA</option>
+        </select><input type="checkbox" autocomplete=off checked=true onchange="setFxaa(this.checked)" name="fxaa" value="fxaa">FXAA<br>
     </body>
 </html>
 <script>
     function setFxaa(bool){
-        fxaaPass.active = bool;
+        fxaaPass.active = !bool;
+    }
+    
+    function changeStep(value){
+        fxaaPass.step = value;
     }
     
     /*global THREE, sphere*/
