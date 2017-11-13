@@ -245,7 +245,7 @@ THREE.FXAAShader = {
 				
 				// Sub-pixel shifting
 				// Full weighted average of the luma over the 3x3 neighborhood.
-				"float lumaAverage = (1.0/9.0) * (lumaHori + lumaVert + lumaWCorners + lumaECorners);",
+				"float lumaAverage = (1.0/9.0) * (lumaHori + lumaVert + lumaWCorners + lumaECorners + lumaM);",
 				// Ratio of the delta between the global average and the center luma, over the luma range in the 3x3 neighborhood.
 				"float subPixelOffsetFinal = clamp(abs(lumaAverage - lumaM)/range - FXAA_SUBPIX_TRIM,0.0,FXAA_SUBPIX_CAP);",
 				
@@ -254,6 +254,11 @@ THREE.FXAAShader = {
 					"return;",
 				"} else if(!(finalOffset>subPixelOffsetFinal) && byp == 6) {",
 					"gl_FragColor = vec4(0.0, 1.0, 0.0, 1.0);",
+					"return;",
+				"}",
+				
+				"if (byp == 9) {",
+					"gl_FragColor = vec4(finalOffset*4.0, 0.0, 0.0, 1.0);",
 					"return;",
 				"}",
 				
@@ -280,7 +285,7 @@ THREE.FXAAShader = {
 	].join( "\n" )
 };
 
-THREE.FXAAPass = function ( dt_size ) {
+THREE.FXAAPass = function ( ) {
 
 	THREE.Pass.call( this );
 	
@@ -305,8 +310,6 @@ THREE.FXAAPass = function ( dt_size ) {
 };
 
 THREE.FXAAPass.prototype = Object.assign( Object.create( THREE.Pass.prototype ), {
-
-	constructor: THREE.GlitchPass,
 
 	render: function ( renderer, writeBuffer, readBuffer, delta, maskActive ) {
 

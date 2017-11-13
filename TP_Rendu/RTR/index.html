@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html>
+    <head>
+		<meta charset="UTF-8">
+		<link rel="stylesheet" href="css/tacit-css-1.1.1.css"/>
+	</head>
+    <body>
+		<section>
+			<article>
+				Hachette Olivier
+				<h1>Rapport de rendu temps réel</h1>
+				<p>Tous les projets utilisent THREE.js comme librairie pour la gestion de la géométrie et du rendu.</p>
+				<h2 id="loop">Loop Subdivision</h2><br>
+				<p>Ce projet implémente le schéma de subdivision de Loop pour les maillages triangulaires.
+				A chaque itération on créé 3 nouveaux points se trouvant sur les bords des triangles déjà existants et on déplace les anciens points.</p>
+				<p>Le code se divise donc en quatres parties distinctes :
+				<ol>
+					<li>Préparation des données</li>
+					<ul>
+						<li>Mise en forme des structures des bords et des faces adjacentes</li>
+						<li>Rajout de l'informations sur les sommets dans les vertices</li>
+					</ul>
+					<li>Calcul des nouveaux points sur les bords</li>
+					<ul>
+						<li>12/16 du nouveau point vient des sommets du vertex</li>
+						<li>4/16 du nouveau point vient des sommets opposés sur les deux faces adjacentes</li>
+					</ul>
+					<li>Calcul de la nouvelle position des sommets déjà existants</li>
+					<ul>
+						<li>Une formule attribue un poids au sommet déjà existant et à chacun des sommets adjacents pour sommer à 1</li>
+					</ul>
+					<li>Création de la nouvelle géométrie</li>
+					<ul>
+						<li>Quatre nouvelles faces par triangle sont crées grâces aux nouveaux sommets calculés</li>
+					</ul>
+				</ol>
+				</p>
+				<p>Par exemple pour le cube :</p>
+				<figure>
+					<img src="images/loop_1.png" width="65%">
+					<figcaption>Figure 1 : Cube avec le wireframe visible</figcaption>
+				</figure>
+				<p>Ce qui nous donne après un pas de subdivision, en rouge un triangle étudié, en bleu les arrêtes formés à partir des nouveaux points et en cyan l'ancienne face du cube :</p>
+				<figure>
+					<img src="images/loop_2.png" width="65%">
+					<figcaption>Figure 2 : Cube après un pas de subdivision</figcaption>
+				</figure>
+				<p>Le nombre de pas de subdivision peut être selectionné ainsi que la géométrie initiale et l'affichage des arrêtes ou non.</p>
+				<p>La gestion des bords n'a pas été implémentée car la représentation des données était déjà un peu fastidieuse en JavaScript.</p>
+				<p><a href="loop.html">Voir le code en action</a></p>
+				<h2 id="implicit">Implicit Surfaces</h2><br>
+				<p>L'algorithme du marching cubes permet la visualisation des surfaces implicites.
+				En effet ces dernières sont caractérisées à partir d'une équation, donc elles ne sont pas directement visible à l'écran.
+				<br>
+				On partage l'espace à une certaine résolution, dans notre cas l'espace est un cube de taille 1x1x1 et la résolution initiale 12.
+				Pour chaque point de cet espace on calcule la somme des fonctions caractérisant nos objets, ici des metaballs (caractérisées par une fonction custom).
+				Cela nous permet de déduire quels sommets sont à l'intérieur ou à l'extérieur de notre seuil.</p>
+				<figure>
+					<img src="images/MarchingCubes.png" width="35%" align="right">
+					<figcaption style="clear:both;float:right;width:35%" >Figure 3 : Les 15 cas possibles <br> Source : Wikipedia</figcaption>
+				</figure>
+				<p>Pour chaque configuration de sommets à l'intérieur ou à l'extérieur de notre surface il y a 15 cas possibles (et leurs symétriques).
+				On a alors 256 cas possibles qui sont stockés dans un tableau. Ce dernier donne les tirangles à tracer depuis les demi-arrêtes pour chaque cas.</p>
+				<p>On trouve ainsi à l'aide d'une valeur calculée sur 8 bits, l'index qu'il faut utiliser dans cette table pour tracer les triangles dans le sous-cube exploré.</p>
+				<p>Si on s'arrête ici le résultat se présente de cette façon :</p>
+				<figure>
+					<img src="images/implicit_1.png" width="65%">
+					<figcaption>Figure 4 : Sans interpollation linéaire, on considère que la surface coupe au milieu nos arrêtes de cube</figcaption>
+				</figure>
+				<p>On effectue alors une interpolation linéaire entre les valeurs des sommets pour approximer l'endroit où la fonction dépasse notre seuil.</p>
+				<p>Enfin il faut stocker de façon intelligente cette interpolation pour ne pas dupliquer les sommets et permettre le calcul de la normale à la surface.</p>
+				<figure>
+					<img src="images/implicit_2.png" width="65%">
+					<figcaption>Figure 5 : Résultat final avec la présence de 3 metaballs</figcaption>
+				</figure>
+				<p><a href="implicit.html">Voir le code en action</a></p>
+				<h2 id="fxaa">Fast Approximated Anti-Aliasing</h2><br>
+				<p>On s'intéresse à l'algorithme FXAA.</p>
+				<p>L'agorithme est implémentée à l'aide d'un shader qui s'applique sur la texture de l'écran récupérée après un premier rendu.
+				Il est très rapide comme il repose sur une étude de la luminosité et une détection sommaire des bords, à l'inverse des autres algorithmes d'anti-aliasing qui reposent souvent sur plusieurs rendus.</p>
+				<p>Ci-dessous les différents rendus qui sont accessibles depuis l'exemple et l'explication par rapport à l'algorithme :</p>
+				<figure>
+					<img src="images/fxaa_1.png">
+					<figcaption>Figure 6 : FXAA_DEBUG_PASSTHROUGH, FXAA_DEBUG_HORZVERT, FXAA_DEBUG_PAIR et FXAA_DEBUG_NEGPOS</figcaption>
+				</figure>
+				<p><em>FXAA_DEBUG_PASSTHROUGH</em> : les pixels sélectionnés pour subire le traitement sont affichés en rouge, ce sont ceux se trouvant sur un bord ou la différence de luminosité est importante et dans une région qui n'est pas trop sombre.<br>
+				<em>FXAA_DEBUG_HORZVERT</em> : les pixels sont triés entre ceux qui sont calculés comme étant sur un bord horizontal en jaune ou vertical en bleu.<br>
+				<em>FXAA_DEBUG_PAIR</em> : les "paires" de pixels et leur attribue une couleur en fonction de la direction dans laquelle on s'est déplacé d'un demi-pixel (à 90° par rapport au bord).<br>
+				<em>FXAA_DEBUG_NEGPOS</em> : on affiche la direction on s'est le plus étendu avant d'atteindre un nouveau gradient de luminosité et donc la fin de notre bord (rouge en négatif et bleu en positif).</p>
+				<figure>
+					<img src="images/fxaa_2.png">
+					<figcaption>Figure 7 : FXAA_DEBUG_OFFSET, FXAA_DEBUG_LOWPASS, FXAA et sans traitement</figcaption>
+				</figure>
+				<p><em>FXAA_DEBUG_OFFSET</em> : montre un mélange entre les deux précédentes images et n'est pas forcément très lisible mais reproduit les exemples fournis par NVIDIA sur son papier.<br>
+				<em>FXAA_DEBUG_LOWPASS</em> : c'est une vue "custom" qui permet de voir les endroits où a été utilisée la fonction de filtre proposée dans le papier de NVIDIA. Elle est utilisée si elle dépasse la valeur calculée à la dernière étape de l'image précédente.<br>
+				Les deux dernières images montrent le résultat, avec à gauche le rendu filtré.</p>
+				<p><a href="fxaa.html">Voir le code en action</a></p>
+				<h2 id="ssao">Screen-Space Ambient Occlusion</h2><br>
+				
+				<p><a href="ssao.html">Voir le code en action</a></p>
+			</article>
+		</section>
+    </body>
+</html>

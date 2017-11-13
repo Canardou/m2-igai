@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html>
+    <head>
+		<meta charset="UTF-8">
+		<link rel="stylesheet" href="css/tacit-css-1.1.1.css"/>
+        <script id="vertexShader" type="x-shader/x-vertex">
+        varying vec3 vNormal;
+        
+        void main() {
+            vNormal = normal;
+            
+            gl_Position =   projectionMatrix * 
+                            modelViewMatrix * 
+                            vec4(position,1.0);
+        }
+        </script>
+        <script id="fragmentShader" type="x-shader/x-fragment">
+        varying vec3 vNormal;
+        
+        void main() {
+            gl_FragColor = vec4(vNormal.x*.5+.5,vNormal.y*.5+.5,vNormal.z*.5+.5,1.0);
+        }
+        </script>
+        <script src="scripts/three.min.js"></script>
+        <script src="scripts/trackball.js"></script>
+        <script src="scripts/subdivise/generateLookups.js"></script>
+    </head>
+    <body>
+		<section><article>
+		<a href="index.html#loop"><< Retour</a>
+        <h1>Loop Subdivision</h1>
+        subdivision : <input type="text" autocomplete=off onchange="changeSub(this.value)" value="2"></input>
+        
+        <select selected="box" autocomplete=off onchange="changeGeometry(this.value)">>
+          <option value="box">Cube</option>
+          <option value="cone">Cone</option>
+          <option value="dodecahedron">Dodecahedron</option>
+          <option value="torus">Torus</option>
+        </select>
+        
+        <label><input type="checkbox" autocomplete=off onchange="setWireframe(this.checked)" name="wireframe" value="wireframe">Wireframe</label><br>
+        <div id="scene"></div>
+        <!-- HTML generated using hilite.me -->
+        Subdivse function : <div style="background: #ffffff; overflow:auto;width:auto;padding:.2em .6em;"><pre style="margin: 0; line-height: 125%"><span style="color: #008800; font-weight: bold">function</span> subdivise(geometry, sub){
+        geometry.faceVertexUvs <span style="color: #333333">=</span> [];
+        sub <span style="color: #333333">=</span> <span style="color: #007020">Math</span>.min(<span style="color: #007020">Math</span>.max(sub,<span style="color: #0000DD; font-weight: bold">0</span>),<span style="color: #0000DD; font-weight: bold">7</span>);
+        <span style="color: #008800; font-weight: bold">for</span>(<span style="color: #008800; font-weight: bold">var</span> boucle <span style="color: #333333">=</span> <span style="color: #0000DD; font-weight: bold">0</span>; boucle <span style="color: #333333">&lt;</span> sub; boucle<span style="color: #333333">++</span>){
+            <span style="color: #008800; font-weight: bold">var</span> oldVertices <span style="color: #333333">=</span> geometry.vertices; <span style="color: #888888">// { x, y, z}</span>
+        	<span style="color: #008800; font-weight: bold">var</span> oldFaces <span style="color: #333333">=</span> geometry.faces; <span style="color: #888888">// { a: oldVertex1, b: oldVertex2, c: oldVertex3 }</span>
+        
+        	<span style="color: #888888">// Generate edges Lookup</span>
+        
+        	<span style="color: #008800; font-weight: bold">var</span> edges <span style="color: #333333">=</span> {}; <span style="color: #888888">// edge oldVertex1_oldVertex2 = { oldVertex1, oldVertex2, faces[]  }</span>
+            <span style="color: #008800; font-weight: bold">var</span> metaVertices <span style="color: #333333">=</span> [];
+        
+        	generateLookups(oldVertices, oldFaces, metaVertices, edges);
+        	
+        	<span style="color: #888888">// new edges vertex</span>
+        	<span style="color: #888888">/*</span>
+<span style="color: #888888">        	    2 6</span>
+<span style="color: #888888">        	     6 2</span>
+<span style="color: #888888">        	*/</span>
+        	
+        	<span style="color: #008800; font-weight: bold">var</span> newEdgeVertices <span style="color: #333333">=</span> [];
+        
+            <span style="color: #008800; font-weight: bold">for</span>(<span style="color: #008800; font-weight: bold">var</span> k <span style="color: #008800; font-weight: bold">in</span> edges){
+                <span style="color: #008800; font-weight: bold">var</span> edge <span style="color: #333333">=</span> edges[k];
+                <span style="color: #888888">//R2, R3, R4</span>
+                <span style="color: #008800; font-weight: bold">var</span> vertexWeight <span style="color: #333333">=</span> <span style="color: #0000DD; font-weight: bold">6</span><span style="color: #333333">/</span><span style="color: #0000DD; font-weight: bold">16</span>;
+                <span style="color: #008800; font-weight: bold">var</span> adjVertexWeight <span style="color: #333333">=</span> <span style="color: #0000DD; font-weight: bold">2</span><span style="color: #333333">/</span><span style="color: #0000DD; font-weight: bold">16</span>;
+                
+                <span style="color: #008800; font-weight: bold">var</span> newVertex <span style="color: #333333">=</span> <span style="color: #008800; font-weight: bold">new</span> THREE.Vector3();
+                
+                newVertex.add(edge.a).multiplyScalar(vertexWeight);
+                newVertex.add(edge.b.clone().multiplyScalar(vertexWeight));
+                
+                <span style="color: #008800; font-weight: bold">for</span>(<span style="color: #008800; font-weight: bold">var</span> l <span style="color: #008800; font-weight: bold">in</span> edge.faces){
+                    <span style="color: #008800; font-weight: bold">var</span> face <span style="color: #333333">=</span> edge.faces[l];
+                    
+                    <span style="color: #888888">// each vertex</span>
+                    <span style="color: #008800; font-weight: bold">var</span> letters <span style="color: #333333">=</span> [<span style="background-color: #fff0f0">&#39;a&#39;</span>,<span style="background-color: #fff0f0">&#39;b&#39;</span>,<span style="background-color: #fff0f0">&#39;c&#39;</span>];
+                    
+                    <span style="color: #008800; font-weight: bold">for</span>(<span style="color: #008800; font-weight: bold">var</span> m <span style="color: #008800; font-weight: bold">in</span> letters){
+                        <span style="color: #008800; font-weight: bold">var</span> vertex <span style="color: #333333">=</span> oldVertices[face[letters[m]]];
+                        <span style="color: #008800; font-weight: bold">if</span>(vertex <span style="color: #333333">!=</span> edge.a <span style="color: #333333">&amp;&amp;</span> vertex <span style="color: #333333">!=</span> edge.b){
+                            newVertex.add(vertex.clone().multiplyScalar(adjVertexWeight));
+                        }
+                    }
+                }
+                edge.newIndex <span style="color: #333333">=</span> newEdgeVertices.length<span style="color: #333333">+</span>oldVertices.length;
+                newEdgeVertices.push(newVertex);
+            }
+            
+            <span style="color: #888888">//console.assert(newEdgeVertices.length == 18, &quot;Edges vertex should count to 18&quot;);</span>
+            
+            <span style="color: #888888">// Reposition already created vertex</span>
+            <span style="color: #888888">/*</span>
+<span style="color: #888888">                1  1  </span>
+<span style="color: #888888">              1  10  1</span>
+<span style="color: #888888">                1  1</span>
+<span style="color: #888888">            */</span>
+            <span style="color: #008800; font-weight: bold">var</span> newSourceVertices <span style="color: #333333">=</span> [];
+            <span style="color: #008800; font-weight: bold">for</span>(<span style="color: #008800; font-weight: bold">var</span> i <span style="color: #333333">=</span> <span style="color: #0000DD; font-weight: bold">0</span>; i <span style="color: #333333">&lt;</span> oldVertices.length; i<span style="color: #333333">++</span>){
+                <span style="color: #008800; font-weight: bold">var</span> oldVertex <span style="color: #333333">=</span> oldVertices[i];
+                
+                <span style="color: #008800; font-weight: bold">let</span> edges <span style="color: #333333">=</span> metaVertices[i].edges;
+                <span style="color: #008800; font-weight: bold">var</span> n <span style="color: #333333">=</span> edges.length;
+                
+                <span style="color: #008800; font-weight: bold">var</span> alpha_n <span style="color: #333333">=</span> <span style="color: #007020">Math</span>.pow(<span style="color: #0000DD; font-weight: bold">3</span><span style="color: #333333">/</span><span style="color: #0000DD; font-weight: bold">8</span> <span style="color: #333333">+</span> <span style="color: #007020">Math</span>.cos(<span style="color: #0000DD; font-weight: bold">2</span><span style="color: #333333">*</span><span style="color: #007020">Math</span>.PI<span style="color: #333333">/</span>n)<span style="color: #333333">/</span><span style="color: #0000DD; font-weight: bold">4</span>, <span style="color: #0000DD; font-weight: bold">2</span>)<span style="color: #333333">+</span><span style="color: #0000DD; font-weight: bold">3</span><span style="color: #333333">/</span><span style="color: #0000DD; font-weight: bold">8</span>;
+                
+                <span style="color: #008800; font-weight: bold">var</span> alpha <span style="color: #333333">=</span> <span style="color: #6600EE; font-weight: bold">1.7</span><span style="color: #333333">*</span>alpha_n <span style="color: #333333">-</span> <span style="color: #0000DD; font-weight: bold">1</span>;
+                <span style="color: #008800; font-weight: bold">var</span> beta <span style="color: #333333">=</span> (<span style="color: #0000DD; font-weight: bold">1</span><span style="color: #333333">-</span>alpha)<span style="color: #333333">/</span>n;
+                
+                <span style="color: #008800; font-weight: bold">let</span> newVertex <span style="color: #333333">=</span> oldVertex.clone().multiplyScalar(alpha);
+                <span style="color: #008800; font-weight: bold">for</span>(<span style="color: #008800; font-weight: bold">var</span> k <span style="color: #008800; font-weight: bold">in</span> edges){
+                    newVertex.add(edges[k].clone().multiplyScalar(beta));
+                }
+                newSourceVertices.push(newVertex);
+            }
+            
+            <span style="color: #888888">//link source and edge -&gt; 1 face = 4 new faces</span>
+            <span style="color: #008800; font-weight: bold">var</span> newFaces <span style="color: #333333">=</span> [];
+            <span style="color: #008800; font-weight: bold">var</span> newVertices <span style="color: #333333">=</span> newSourceVertices.concat(newEdgeVertices);
+            <span style="color: #008800; font-weight: bold">for</span>(<span style="color: #008800; font-weight: bold">var</span> i <span style="color: #333333">=</span> <span style="color: #0000DD; font-weight: bold">0</span>; i<span style="color: #333333">&lt;</span>oldFaces.length; i<span style="color: #333333">++</span>){
+                <span style="color: #008800; font-weight: bold">var</span> face <span style="color: #333333">=</span> oldFaces[i];
+                
+                <span style="color: #008800; font-weight: bold">var</span> d <span style="color: #333333">=</span> getEdge( face.a, face.b, edges ).newIndex;
+                <span style="color: #008800; font-weight: bold">var</span> e <span style="color: #333333">=</span> getEdge( face.b, face.c, edges ).newIndex;
+                <span style="color: #008800; font-weight: bold">var</span> f <span style="color: #333333">=</span> getEdge( face.c, face.a, edges ).newIndex;
+                
+                <span style="color: #888888">/*</span>
+<span style="color: #888888">                        a</span>
+<span style="color: #888888">                       / \</span>
+<span style="color: #888888">                      d---f</span>
+<span style="color: #888888">                     / \ / \</span>
+<span style="color: #888888">                    b---e---c </span>
+<span style="color: #888888">                */</span>
+                newFaces.push(<span style="color: #008800; font-weight: bold">new</span> THREE.Face3(d, e, f));
+                newFaces.push(<span style="color: #008800; font-weight: bold">new</span> THREE.Face3(face.a, d, f));
+                newFaces.push(<span style="color: #008800; font-weight: bold">new</span> THREE.Face3(face.b, e, d));
+                newFaces.push(<span style="color: #008800; font-weight: bold">new</span> THREE.Face3(face.c, f, e));
+            }
+            
+            geometry.faces <span style="color: #333333">=</span> newFaces;
+            geometry.vertices <span style="color: #333333">=</span> newVertices;
+        }
+        geometry.computeVertexNormals();
+        <span style="color: #008800; font-weight: bold">return</span> geometry;
+    }
+</pre></div>
+	</article></section>
+    </body>
+</html>
+<script>
+    
+    /*global THREE, BSpline, Surface*/
+    var current = "box";
+    var nbSubdivise = 2;
+    var wireframeBool = false;
+    var list_geometry = {"box" : new THREE.BoxGeometry( 1, 1, 1 ),
+                        "cone" : new THREE.ConeGeometry( 1, 1, 5 ),
+                        "dodecahedron" : new THREE.DodecahedronGeometry(1),
+                        "torus" : new THREE.TorusGeometry( 1, 0.25, 3, 5 )
+    }  
+                            
+    //var geometry = new THREE.ConeGeometry( 1, 1, 5 );
+    
+    
+    
+    function subdivise(geometry, sub){
+        geometry.faceVertexUvs = [];
+        sub = Math.min(Math.max(sub,0),7);
+        for(var boucle = 0; boucle < sub; boucle++){
+            var oldVertices = geometry.vertices; // { x, y, z}
+        	var oldFaces = geometry.faces; // { a: oldVertex1, b: oldVertex2, c: oldVertex3 }
+        
+        	// Generate edges Lookup
+        
+        	var edges = {}; // edge oldVertex1_oldVertex2 = { oldVertex1, oldVertex2, faces[]  }
+            var metaVertices = [];
+        
+        	generateLookups(oldVertices, oldFaces, metaVertices, edges);
+        	
+        	// new edges vertex
+        	/*
+        	    2 6
+        	     6 2
+        	*/
+        	
+        	var newEdgeVertices = [];
+        
+            for(var k in edges){
+                var edge = edges[k];
+                //R2, R3, R4
+                var vertexWeight = 6/16;
+                var adjVertexWeight = 2/16;
+                
+                var newVertex = new THREE.Vector3();
+                
+                newVertex.add(edge.a).multiplyScalar(vertexWeight);
+                newVertex.add(edge.b.clone().multiplyScalar(vertexWeight));
+                
+                for(var l in edge.faces){
+                    var face = edge.faces[l];
+                    
+                    // each vertex
+                    var letters = ['a','b','c'];
+                    
+                    for(var m in letters){
+                        var vertex = oldVertices[face[letters[m]]];
+                        if(vertex != edge.a && vertex != edge.b){
+                            newVertex.add(vertex.clone().multiplyScalar(adjVertexWeight));
+                        }
+                    }
+                }
+                edge.newIndex = newEdgeVertices.length+oldVertices.length;
+                newEdgeVertices.push(newVertex);
+            }
+            
+            //console.assert(newEdgeVertices.length == 18, "Edges vertex should count to 18");
+            
+            // Reposition already created vertex
+            /*
+                1  1  
+              1  10  1
+                1  1
+            */
+            var newSourceVertices = [];
+            for(var i = 0; i < oldVertices.length; i++){
+                var oldVertex = oldVertices[i];
+                
+                let edges = metaVertices[i].edges;
+                var n = edges.length;
+                
+                var alpha_n = Math.pow(3/8 + Math.cos(2*Math.PI/n)/4, 2)+3/8;
+                
+                var alpha = 1.7*alpha_n - 1;
+                var beta = (1-alpha)/n;
+                
+                let newVertex = oldVertex.clone().multiplyScalar(alpha);
+                for(var k in edges){
+                    newVertex.add(edges[k].clone().multiplyScalar(beta));
+                }
+                newSourceVertices.push(newVertex);
+            }
+            
+            //link source and edge -> 1 face = 4 new faces
+            var newFaces = [];
+            var newVertices = newSourceVertices.concat(newEdgeVertices);
+            for(var i = 0; i<oldFaces.length; i++){
+                var face = oldFaces[i];
+                
+                var d = getEdge( face.a, face.b, edges ).newIndex;
+                var e = getEdge( face.b, face.c, edges ).newIndex;
+                var f = getEdge( face.c, face.a, edges ).newIndex;
+                
+                /*
+                        a
+                       / \
+                      d---f
+                     / \ / \
+                    b---e---c 
+                */
+                newFaces.push(new THREE.Face3(d, e, f));
+                newFaces.push(new THREE.Face3(face.a, d, f));
+                newFaces.push(new THREE.Face3(face.b, e, d));
+                newFaces.push(new THREE.Face3(face.c, f, e));
+            }
+            
+            geometry.faces = newFaces;
+            geometry.vertices = newVertices;
+        }
+        geometry.computeVertexNormals();
+        return geometry;
+    }
+    
+    
+    var geometry = subdivise(list_geometry[current].clone(),nbSubdivise);
+    
+    var scene = new THREE.Scene();
+
+    var renderer = new THREE.WebGLRenderer();
+
+    renderer.setSize(screen.width/2, screen.height/2);
+    
+    var domElem = document.getElementById("scene").appendChild(renderer.domElement);
+    
+    var camera = new THREE.PerspectiveCamera(40, screen.width / screen.height, 0.1, 15000);
+    camera.position.set(0, 0, 4);
+    camera.lookAt(new THREE.Vector3(0, 0, 0));
+    
+    var material = new THREE.ShaderMaterial({
+    	vertexShader: document.getElementById( 'vertexShader' ).textContent,
+    	fragmentShader: document.getElementById( 'fragmentShader' ).textContent
+    });
+    
+    var object = new THREE.Mesh( geometry, material );
+    
+    var geo = new THREE.WireframeGeometry( geometry); // or WireframeGeometry
+    var mat = new THREE.LineBasicMaterial( { color: 0xffffff, linewidth: 2} );
+    var wireframe = new THREE.LineSegments( geo, mat );
+    
+   scene.add(object);
+        
+    var camControls = new THREE.TrackballControls( camera, domElem );
+	camControls.rotateSpeed = 5.0;
+	camControls.zoomSpeed = 1.2;
+	camControls.panSpeed = 0.8;
+	camControls.noZoom = false;
+	camControls.noPan = false;
+	camControls.staticMoving = true;
+	camControls.dynamicDampingFactor = 0.3;
+	camControls.keys = [ 65, 83, 68 ];
+	camControls.addEventListener( 'change', render );
+    
+    
+    function changeGeometry(geo){
+        current = geo;
+        redraw();
+    }
+    
+    function changeSub(k){
+        nbSubdivise = parseInt(k);
+        redraw();
+    }
+    
+    function setWireframe(bool){
+        wireframeBool = bool;
+        if(wireframeBool){
+            scene.remove(wireframe);
+            scene.add( wireframe );
+        }
+        else
+            scene.remove(wireframe);
+    }
+    
+    function redraw(){
+        scene.remove(object);
+        scene.remove(wireframe);
+        
+        var geometry = subdivise(list_geometry[current].clone(),nbSubdivise);
+        object = new THREE.Mesh( geometry, material );
+        
+ 
+        var geo = new THREE.WireframeGeometry( geometry); // or WireframeGeometry
+        var mat = new THREE.LineBasicMaterial( { color: 0xffffff, linewidth: 2} );
+        wireframe = new THREE.LineSegments( geo, mat );
+        
+        if(wireframeBool){
+            scene.add( wireframe );
+        }
+        
+        scene.add(object);
+    }
+    
+    
+    var clock = new THREE.Clock();
+    
+    (function animloop(){
+      requestAnimationFrame(animloop);
+      camControls.update(clock.getDelta());
+      render();
+    })();
+    
+    function render(){
+		renderer.render( scene, camera );
+    }
+</script>

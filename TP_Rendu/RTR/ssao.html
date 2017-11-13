@@ -1,6 +1,8 @@
 <!DOCTYPE html>
 <html>
     <head>
+		<meta charset="UTF-8">
+		<link rel="stylesheet" href="css/tacit-css-1.1.1.css"/>
         <script id="vertexShader" type="x-shader/x-vertex">
         varying vec2 vUv;
         varying vec3 vNormal;
@@ -23,16 +25,18 @@
             gl_FragColor = texture2D(texture, vUv)*vec4(vNormal*.5+.5,1.0);
         }
         </script>
-        <script src="three.min.js"></script>
-        <script src="trackball.js"></script>
-        <script src="TP5/CopyShader.js"></script>
-        <script src="TP5/ShaderPass.js"></script>
-        <script src="TP5/EffectComposer.js"></script>
-        <script src="TP5/RenderPass.js"></script>
-        <script src="TP5/FXAAPass.js"></script>
+        <script src="scripts/three.min.js"></script>
+        <script src="scripts/trackball.js"></script>
+        <script src="scripts/CopyShader.js"></script>
+        <script src="scripts/ShaderPass.js"></script>
+        <script src="scripts/EffectComposer.js"></script>
+        <script src="scripts/RenderPass.js"></script>
+        <script src="scripts/ssao/SSAOPass.js"></script>
     </head>
     <body>
-        <h1>FXAA</h1>
+		<section><article>
+		<a href="index.html#ssao"><< Retour</a>
+        <h1>SSAO</h1>
         <select selected="7" autocomplete=off onchange="changeStep(this.value)">>
           <option value="1">FXAA_DEBUG_PASSTHROUGH</option>
           <option value="2">FXAA_DEBUG_HORZVERT</option>
@@ -42,8 +46,10 @@
           <option value="6">FXAA_DEBUG_LOWPASS</option>
           <option value="7">FXAA</option>
           <option value="8">FXAA_DEBUG_LUMA</option>
-        </select><input type="checkbox" autocomplete=off checked=true onchange="setFxaa(this.checked)" name="fxaa" value="fxaa">FXAA<br>
+        </select>
+        <label><input type="checkbox" autocomplete=off checked=true onchange="setFxaa(this.checked)" name="fxaa" value="fxaa">FXAA</label><br>
         <div id="scene"></div>
+	</article></section>
     </body>
 </html>
 <script>
@@ -62,14 +68,14 @@
 
     renderer.setSize(screen.width/2, screen.height/2);
     
-    document.getElementById("scene").appendChild(renderer.domElement);
+    var domElem = document.getElementById("scene").appendChild(renderer.domElement);
     
-    var camera = new THREE.PerspectiveCamera(40, screen.width / screen.height, 0.1, 15000);
+    var camera = new THREE.PerspectiveCamera(40, screen.width / screen.height, 1, 50);
     camera.position.set(0, 0, 10);
     camera.lookAt(new THREE.Vector3(0, 0, 0));
     
 
-    var camControls = new THREE.TrackballControls( camera );
+    var camControls = new THREE.TrackballControls( camera, domElem );
 	camControls.rotateSpeed = 5.0;
 	camControls.zoomSpeed = 1.2;
 	camControls.panSpeed = 0.8;
@@ -79,23 +85,40 @@
 	camControls.dynamicDampingFactor = 0.3;
 	camControls.keys = [ 65, 83, 68 ];
 	camControls.addEventListener( 'change', render );
-    
-    var material = new THREE.ShaderMaterial({
+	
+	var material = new THREE.ShaderMaterial({
     	vertexShader: document.getElementById( 'vertexShader' ).textContent,
     	fragmentShader: document.getElementById( 'fragmentShader' ).textContent,
-    	uniforms: {
-            texture: { type: "t", value: new THREE.TextureLoader().load('crate.jpg') }
-        }
     });
     
-    var box =  new THREE.BoxGeometry( 2, 2, 2 );
-    var object = new THREE.Mesh( box, material );
-    scene.add(object);
+    group = new THREE.Object3D();
+	scene.add( group );
+
+	var geometry = new THREE.BoxGeometry( 1, 1, 1 );
+	for ( var i = 0; i < 25; i ++ ) {
+
+		var material = new THREE.MeshBasicMaterial();
+		material.color.r = Math.random();
+		material.color.g = Math.random();
+		material.color.b = Math.random();
+
+		var mesh = new THREE.Mesh( geometry, material );
+		mesh.position.x = Math.random() * 5 - 2.5;
+		mesh.position.y = Math.random() * 5 - 2.5;
+		mesh.position.z = Math.random() * 5 - 2.5;
+		mesh.rotation.x = Math.random();
+		mesh.rotation.y = Math.random();
+		mesh.rotation.z = Math.random();
+
+		mesh.scale.x = mesh.scale.y = mesh.scale.z = Math.random() * 1 + 1;
+		group.add( mesh );
+
+	}
     
     var composer = new THREE.EffectComposer( renderer );
 	composer.addPass( new THREE.RenderPass( scene, camera ) );
 
-	var fxaaPass = new THREE.FXAAPass();
+	var fxaaPass = new THREE.SSAOPass( scene, camera, screen.width/2, screen.height/2);
 	fxaaPass.renderToScreen = true;
 	composer.addPass( fxaaPass );
 	
@@ -111,4 +134,5 @@
     function render(){
 		renderer.render( scene, camera );
     }
+	
 </script>
