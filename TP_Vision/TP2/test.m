@@ -1,15 +1,19 @@
-[img,color]=imread('test.gif');
+[imgTmp,colorTmp]=imread('test.gif');
 
-image = ind2rgb(img,color);
-rgb2lab(image);
+img = imgTmp + 1;
 
-p = bayes(img,color,[1,1,10,10],[84,1,10,10],[150,1,10,10]);
+color = rgb2lab(colorTmp);
+
+p = bayes(img,color,[1,1,10,10],[84,1,10,10],[130,1,10,10]);
 
 treated = zeros(size(img));
 for x = 1:size(img,2)
     for y = 1:size(img,1)
+        proba = zeros(size(p));
         current = color(img(y,x),:);
-        proba = [p{1}(current) p{2}(current) p{3}(current)];
+        for p_ = 1:size(p,2)
+            proba(p_) = p{p_}(current);
+        end
         [maxnum,maxid] = max(proba(:));
         treated(y,x) = (maxid - 1)*0.5;
     end
@@ -18,7 +22,7 @@ end
 subplot(2,1,1)
 imshow(treated);
 subplot(2,1,2)
-image(img);colormap(color);axis image;
+imshow(imgTmp,colorTmp);axis image;
 
 % arguments [x,y,width,height]
 function p = bayes(img,color,varargin)
@@ -28,7 +32,7 @@ function p = bayes(img,color,varargin)
         average = [0,0,0];
         for x = current(1):current(1)+current(3)
            for y = current(2):current(2)+current(4)
-               average = average + color(img(y,x)+1,:);
+               average = average + color(img(y,x),:);
            end
         end
         for i = 1:3
