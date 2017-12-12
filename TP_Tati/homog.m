@@ -1,5 +1,6 @@
 function H=homog(pg,pd)
     % hartley normalization
+    % gauche
     n = size(pg,2);
     uk = 1/n*sum(pg(1,:));
     vk = 1/n*sum(pg(2,:));
@@ -10,7 +11,7 @@ function H=homog(pg,pd)
     Tg = [ak 0 -ak*uk;0 ak -ak*vk;0 0 1];
     pg = [pg; ones(1,n)];
     pg = Tg*pg;
-
+    % droite
     uk = mean(pd(1,:));
     vk = mean(pd(2,:));
     for i=1:n
@@ -29,6 +30,7 @@ function H=homog(pg,pd)
         vip = pd(2,i);
         D = [D;[ui vi 1 0 0 0 (-uip*ui) (-uip*vi) (-uip)];[0 0 0 ui vi 1 (-vip*ui) (-vip*vi) (-vip)]];
     end
+    % vp
     [V,M] = eig(D'*D);
     h = V(:,1);
     H = reshape(h,3,3)';

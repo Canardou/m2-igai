@@ -15,7 +15,7 @@ for x = 1:size(img,2)
             proba(p_) = p{p_}(current);
         end
         [maxnum,maxid] = max(proba(:));
-        treated(y,x) = (maxid - 1)*0.5;
+        treated(y,x) = (maxid - 1)*(1/(size(p,2)-1));
     end
 end
 
