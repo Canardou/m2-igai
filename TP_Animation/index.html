@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html>
+    <head>
+		<meta charset="UTF-8">
+		<link rel="stylesheet" href="css/tacit-css-1.1.1.css"/>
+        <script id="vertexShader" type="x-shader/x-vertex">
+        uniform vec3 uBonesPosition[ 4 ];
+        uniform mat4 uBonesTransformation[ 4 ];
+        
+        varying vec3 vNormal;
+        attribute vec4 bones;
+        attribute vec4 weights;
+        
+        void main() {
+            vNormal = vec3(weights[0],weights[1],0.0);
+            mat4 boneTransform =
+                ( uBonesTransformation[ int(bones[0]) ] * weights[0] ) +
+                ( uBonesTransformation[ int(bones[1]) ] * weights[1] ) +
+                ( uBonesTransformation[ int(bones[2]) ] * weights[2] ) +
+                ( uBonesTransformation[ int(bones[3]) ] * weights[3] );
+            mat4 mv = projectionMatrix * 
+                        modelViewMatrix;
+            gl_Position =  mv * boneTransform *
+                        vec4(position,1.0);
+        }
+        </script>
+        <script id="fragmentShader" type="x-shader/x-fragment">
+        varying vec3 vNormal;
+        
+        void main() {
+            gl_FragColor = vec4(vNormal.x*.5+.5,vNormal.y*.5+.5,vNormal.z*.5+.5,1.0);
+        }
+        </script>
+        <script src="scripts/three.min.js"></script>
+        <script src="scripts/trackball.js"></script>
+        <script src="scripts/subdivise/generateLookups.js"></script>
+    </head>
+    <body>
+		<section><article>
+        <h1>Bones</h1>
+
+        <div id="scene"></div>
+        
+	    </article></section>
+    </body>
+</html>
+<script>
+    
+    /*global THREE*/
+    
+    var geometry = new THREE.CylinderGeometry( 1, 1, 10, 16, 8 );
+
+    var scene = new THREE.Scene();
+
+    var renderer = new THREE.WebGLRenderer();
+
+    renderer.setSize(700, 400);
+    
+    var domElem = document.getElementById("scene").appendChild(renderer.domElement);
+    
+    var camera = new THREE.PerspectiveCamera(40, 700 / 400, 0.1, 15000);
+    camera.position.set(0, 0, 20);
+    camera.lookAt(new THREE.Vector3(0, 0, 0));
+    
+    //var object = new THREE.Mesh( geometry, material );
+    
+    //var geo = new THREE.WireframeGeometry( geometry); // or WireframeGeometry
+    //var mat = new THREE.LineBasicMaterial( { color: 0xffffff, linewidth: 2} );
+    //var wireframe = new THREE.LineSegments( geo, mat );
+    
+    class Bone{
+       constructor(x,y,z){
+           this.position = new THREE.Vector3(x,y,z);
+           this.transformation = (new THREE.Matrix4()).identity();
+       }
+    }
+    
+    var bufferGeometry = new THREE.BufferGeometry().fromGeometry( geometry );
+    
+    var bonesGeometry = [];
+    var tmp_bone = new Bone(0,0,0);
+    //tmp_bone.transformation.makeRotationZ(0.7);
+    bonesGeometry.push(tmp_bone);
+    bonesGeometry.push(new Bone(0,5.1,1));
+    bonesGeometry.push(new Bone(0,0,0));
+    bonesGeometry.push(new Bone(0,0,0));
+    
+    var uBonesPosition = [];
+    var uBonesTransformation = [];
+    for(var k in bonesGeometry){
+        uBonesPosition.push(bonesGeometry[k].position);
+        uBonesTransformation.push(bonesGeometry[k].transformation);
+    }
+    
+    var material = new THREE.ShaderMaterial({
+        uniforms: {
+            uBonesPosition: { type: "v3v", value: uBonesPosition },
+            uBonesTransformation: { type: "m4v", value: uBonesTransformation }
+        },
+    	vertexShader: document.getElementById( 'vertexShader' ).textContent,
+    	fragmentShader: document.getElementById( 'fragmentShader' ).textContent
+    });
+    
+     
+    var vertices = bufferGeometry.attributes.position;
+    var bones = [];
+    var weights = [];
+    
+    for(var i = 0; i < vertices.count; i++){
+        if(vertices.getY(i) > 2)
+            weights = weights.concat([1,0,0,0]); 
+        else if(vertices.getY(i) < -2)
+            weights = weights.concat([0,1,0,0]); 
+        else {
+            var tmp = (vertices.getY(i)+2)/4;
+            weights = weights.concat([tmp,1-tmp,0,0])
+        }
+        bones = bones.concat([0,1,0,0]);
+    }
+    bones = new Uint8Array(bones);
+    weights = new Float32Array(weights);
+    
+    // itemSize = 3 because there are 3 values (components) per vertex
+    bufferGeometry.addAttribute( 'weights', new THREE.BufferAttribute( weights, 4) );
+    bufferGeometry.addAttribute( 'bones', new THREE.BufferAttribute( bones, 4) );
+    
+    var mesh = new THREE.Mesh( bufferGeometry, material );
+    
+    scene.add(mesh);
+    //scene.add(wireframe);
+        
+    var camControls = new THREE.TrackballControls( camera, domElem );
+	camControls.rotateSpeed = 5.0;
+	camControls.zoomSpeed = 1.2;
+	camControls.panSpeed = 0.8;
+	camControls.noZoom = false;
+	camControls.noPan = false;
+	camControls.staticMoving = true;
+	camControls.dynamicDampingFactor = 0.3;
+	camControls.keys = [ 65, 83, 68 ];
+	camControls.addEventListener( 'change', render );
+    
+    var clock = new THREE.Clock();
+    
+    (function animloop(){
+      requestAnimationFrame(animloop);
+      camControls.update(clock.getDelta());
+      render();
+      uBonesTransformation[1].makeRotationZ(clock.getElapsedTime()).multiply(new THREE.Matrix4().makeTranslation(5,0,0));
+    })();
+    
+    function render(){
+		renderer.render( scene, camera );
+    }
+</script>

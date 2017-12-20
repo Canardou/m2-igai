@@ -37,28 +37,133 @@
 		<section><article>
 		<a href="index.html#ssao"><< Retour</a>
         <h1>SSAO</h1>
-        <select selected="7" autocomplete=off onchange="changeStep(this.value)">>
-          <option value="1">FXAA_DEBUG_PASSTHROUGH</option>
-          <option value="2">FXAA_DEBUG_HORZVERT</option>
-          <option value="3">FXAA_DEBUG_PAIR</option>
-          <option value="4">FXAA_DEBUG_NEGPOS</option>
-          <option value="5">FXAA_DEBUG_OFFSET</option>
-          <option value="6">FXAA_DEBUG_LOWPASS</option>
-          <option value="7">FXAA</option>
-          <option value="8">FXAA_DEBUG_LUMA</option>
+        <select selected="3" autocomplete=off onchange="changeStep(this.value)">>
+          <option value="3">SSAO</option>
+          <option value="0">Without</option>
+          <option value="2">Occlusion only</option>
+          <option value="1">Normal map</option>
         </select>
-        <label><input type="checkbox" autocomplete=off checked=true onchange="setFxaa(this.checked)" name="fxaa" value="fxaa">FXAA</label><br>
         <div id="scene"></div>
+        Fragment shader : <!-- HTML generated using hilite.me --><div style="background: #ffffff; overflow:auto;width:auto;padding:.2em .6em;"><pre style="margin: 0; line-height: 125%">uniform sampler2D screenTexture;
+uniform sampler2D tDepth;
+uniform <span style="color: #333399; font-weight: bold">float</span> cameraNear;
+uniform <span style="color: #333399; font-weight: bold">float</span> cameraFar;
+uniform vec2 size;
+uniform <span style="color: #333399; font-weight: bold">int</span> byp;
+varying vec2 vUv;
+		
+<span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">int</span> samples <span style="color: #333333">=</span> <span style="color: #0000DD; font-weight: bold">32</span>;
+		
+<span style="color: #333399; font-weight: bold">float</span> uRadius <span style="color: #333333">=</span> <span style="color: #6600EE; font-weight: bold">0.1</span>;
+		
+<span style="color: #557799">#include &lt;packing&gt;</span>
+		
+vec2 inverseScreenSize;
+		
+<span style="color: #333399; font-weight: bold">float</span> <span style="color: #0066BB; font-weight: bold">readDepth</span>( <span style="color: #008800; font-weight: bold">const</span> in vec2 coord ) {
+
+	<span style="color: #333399; font-weight: bold">float</span> cameraFarPlusNear <span style="color: #333333">=</span> cameraFar <span style="color: #333333">+</span> cameraNear;
+	<span style="color: #333399; font-weight: bold">float</span> cameraFarMinusNear <span style="color: #333333">=</span> cameraFar <span style="color: #333333">-</span> cameraNear;
+	<span style="color: #333399; font-weight: bold">float</span> cameraCoef <span style="color: #333333">=</span> <span style="color: #6600EE; font-weight: bold">2.0</span> <span style="color: #333333">*</span> cameraFar <span style="color: #333333">*</span> cameraNear;
+
+	<span style="color: #FF0000; background-color: #FFAAAA">#</span>ifdef USE_LOGDEPTHBUF
+
+		<span style="color: #333399; font-weight: bold">float</span> logz <span style="color: #333333">=</span> unpackRGBAToDepth( texture2D( tDepth, coord ) );
+		<span style="color: #333399; font-weight: bold">float</span> w <span style="color: #333333">=</span> pow(<span style="color: #6600EE; font-weight: bold">2.0</span>, (logz <span style="color: #333333">/</span> logDepthBufFC)) <span style="color: #333333">-</span> <span style="color: #6600EE; font-weight: bold">1.0</span>;
+		<span style="color: #333399; font-weight: bold">float</span> z <span style="color: #333333">=</span> (logz <span style="color: #333333">/</span> w) <span style="color: #333333">+</span> <span style="color: #6600EE; font-weight: bold">1.0</span>;
+
+	<span style="color: #FF0000; background-color: #FFAAAA">#</span><span style="color: #008800; font-weight: bold">else</span>
+
+		<span style="color: #333399; font-weight: bold">float</span> z <span style="color: #333333">=</span> unpackRGBAToDepth( texture2D( tDepth, coord ) );
+
+	<span style="color: #FF0000; background-color: #FFAAAA">#</span>endif
+
+    z <span style="color: #333333">=</span> z <span style="color: #333333">*</span> <span style="color: #6600EE; font-weight: bold">2.0</span> <span style="color: #333333">-</span> <span style="color: #6600EE; font-weight: bold">1.0</span>;
+
+	<span style="color: #008800; font-weight: bold">return</span> cameraCoef <span style="color: #333333">/</span> ( cameraFarPlusNear <span style="color: #333333">-</span> z <span style="color: #333333">*</span> cameraFarMinusNear );
+
+
+}
+		
+vec3 <span style="color: #0066BB; font-weight: bold">calculNormal</span>( <span style="color: #333399; font-weight: bold">float</span> depth, vec2 uv ) {
+
+	vec2 offset1 <span style="color: #333333">=</span> vec2(<span style="color: #0000DD; font-weight: bold">0</span>,<span style="color: #0000DD; font-weight: bold">1</span>)<span style="color: #333333">*</span>inverseScreenSize.y;
+	vec2 offset2 <span style="color: #333333">=</span> vec2(<span style="color: #0000DD; font-weight: bold">1</span>,<span style="color: #0000DD; font-weight: bold">0</span>)<span style="color: #333333">*</span>inverseScreenSize.x;
+			  
+	<span style="color: #333399; font-weight: bold">float</span> depth1 <span style="color: #333333">=</span> readDepth( uv <span style="color: #333333">+</span> offset1);
+	<span style="color: #333399; font-weight: bold">float</span> depth2 <span style="color: #333333">=</span> readDepth( uv <span style="color: #333333">+</span> offset2);
+			  
+	vec3 p1 <span style="color: #333333">=</span> vec3(offset1, depth1 <span style="color: #333333">-</span> depth);
+	vec3 p2 <span style="color: #333333">=</span> vec3(offset2, depth2 <span style="color: #333333">-</span> depth);
+			  
+	vec3 normal <span style="color: #333333">=</span> cross(p1, p2);
+			  
+	<span style="color: #008800; font-weight: bold">return</span> normalize(normal);
+
+
+}
+		
+<span style="color: #333399; font-weight: bold">float</span> <span style="color: #0066BB; font-weight: bold">rand</span>(vec2 co){
+	<span style="color: #008800; font-weight: bold">return</span> fract(sin(dot(co.xy ,vec2(<span style="color: #6600EE; font-weight: bold">12.9898</span>,<span style="color: #6600EE; font-weight: bold">78.233</span>))) <span style="color: #333333">*</span> <span style="color: #6600EE; font-weight: bold">43758.5453</span>);
+}
+		
+<span style="color: #333399; font-weight: bold">void</span> <span style="color: #0066BB; font-weight: bold">main</span>() {
+	inverseScreenSize <span style="color: #333333">=</span> vec2(<span style="color: #6600EE; font-weight: bold">1.0</span><span style="color: #333333">/</span>size.x, <span style="color: #6600EE; font-weight: bold">1.0</span><span style="color: #333333">/</span>size.y);
+			<span style="color: #888888">//get depth</span>
+	<span style="color: #333399; font-weight: bold">float</span> depth <span style="color: #333333">=</span> readDepth(vUv);
+			<span style="color: #888888">//calculate informations of the point : normal(world) + position(x,y,z) screen space</span>
+	vec3 normal <span style="color: #333333">=</span> calculNormal( depth, vUv);
+	vec3 position <span style="color: #333333">=</span> vec3( vUv, depth);
+			<span style="color: #888888">//generate hemisphere</span>
+	vec3 kernel[samples];
+	<span style="color: #008800; font-weight: bold">for</span>(<span style="color: #333399; font-weight: bold">int</span> i <span style="color: #333333">=</span> <span style="color: #0000DD; font-weight: bold">0</span>; i <span style="color: #333333">&lt;</span> samples; <span style="color: #333333">++</span>i) {
+		kernel[i] <span style="color: #333333">=</span> vec3(
+		rand(vUv<span style="color: #333333">*</span>(<span style="color: #6600EE; font-weight: bold">0.1</span><span style="color: #333333">*</span>(<span style="color: #333399; font-weight: bold">float</span>(i)<span style="color: #333333">+</span><span style="color: #6600EE; font-weight: bold">1.0</span>)))<span style="color: #333333">*</span><span style="color: #6600EE; font-weight: bold">2.0</span><span style="color: #333333">-</span><span style="color: #6600EE; font-weight: bold">1.0</span>,
+		rand(vUv<span style="color: #333333">*</span>(<span style="color: #6600EE; font-weight: bold">0.11</span><span style="color: #333333">*</span>(<span style="color: #333399; font-weight: bold">float</span>(i)<span style="color: #333333">+</span><span style="color: #6600EE; font-weight: bold">1.0</span>)))<span style="color: #333333">*</span><span style="color: #6600EE; font-weight: bold">2.0</span><span style="color: #333333">-</span><span style="color: #6600EE; font-weight: bold">1.0</span>,
+		rand(vUv<span style="color: #333333">*</span>(<span style="color: #6600EE; font-weight: bold">0.12</span><span style="color: #333333">*</span>(<span style="color: #333399; font-weight: bold">float</span>(i)<span style="color: #333333">+</span><span style="color: #6600EE; font-weight: bold">1.0</span>)))<span style="color: #333333">*</span><span style="color: #6600EE; font-weight: bold">1.0</span>);
+		kernel[i] <span style="color: #333333">=</span> normalize(kernel[i]);
+		<span style="color: #333399; font-weight: bold">float</span> scale <span style="color: #333333">=</span> <span style="color: #333399; font-weight: bold">float</span>(i) <span style="color: #333333">/</span> <span style="color: #333399; font-weight: bold">float</span>(samples);
+		scale <span style="color: #333333">=</span> clamp(scale <span style="color: #333333">*</span> scale, <span style="color: #6600EE; font-weight: bold">0.1</span>, <span style="color: #6600EE; font-weight: bold">1.0</span>);
+		kernel[i] <span style="color: #333333">*=</span> scale;
+	}
+			<span style="color: #888888">//rotation matrix</span>
+	vec3 tangent <span style="color: #333333">=</span> normalize(kernel[<span style="color: #0000DD; font-weight: bold">0</span>] <span style="color: #333333">-</span> normal <span style="color: #333333">*</span> dot(kernel[<span style="color: #0000DD; font-weight: bold">0</span>], normal));
+	vec3 bitangent <span style="color: #333333">=</span> cross(normal, tangent);
+	mat3 tbn <span style="color: #333333">=</span> mat3(tangent, bitangent, normal);
+			
+	<span style="color: #333399; font-weight: bold">float</span> occlusion <span style="color: #333333">=</span> <span style="color: #6600EE; font-weight: bold">0.0</span>;
+	<span style="color: #008800; font-weight: bold">for</span> (<span style="color: #333399; font-weight: bold">int</span> i <span style="color: #333333">=</span> <span style="color: #0000DD; font-weight: bold">0</span>; i <span style="color: #333333">&lt;</span> samples; <span style="color: #333333">++</span>i) {
+			<span style="color: #888888">// get sample position:</span>
+		vec3 sample <span style="color: #333333">=</span> tbn <span style="color: #333333">*</span> kernel[i];
+		sample <span style="color: #333333">=</span> sample <span style="color: #333333">*</span> uRadius <span style="color: #333333">+</span> position;
+			  
+			<span style="color: #888888">// get sample depth:</span>
+		<span style="color: #333399; font-weight: bold">float</span> sampleDepth <span style="color: #333333">=</span> readDepth(sample.xy);
+			  
+			<span style="color: #888888">// range check &amp; accumulate:</span>
+		<span style="color: #333399; font-weight: bold">float</span> rangeCheck<span style="color: #333333">=</span> abs(position.z <span style="color: #333333">-</span> sampleDepth) <span style="color: #333333">&lt;</span> uRadius <span style="color: #333333">*</span> <span style="color: #6600EE; font-weight: bold">2.0</span> <span style="color: #333333">?</span> <span style="color: #6600EE; font-weight: bold">1.0</span> <span style="color: #333333">:</span> <span style="color: #6600EE; font-weight: bold">0.0</span>;
+		occlusion <span style="color: #333333">+=</span> (sampleDepth <span style="color: #333333">&lt;=</span> sample.z <span style="color: #333333">?</span> <span style="color: #6600EE; font-weight: bold">1.0</span> <span style="color: #333333">:</span> <span style="color: #6600EE; font-weight: bold">0.0</span>) <span style="color: #333333">*</span> rangeCheck;
+	}
+
+	occlusion <span style="color: #333333">=</span> <span style="color: #6600EE; font-weight: bold">1.0</span> <span style="color: #333333">-</span> occlusion <span style="color: #333333">/</span> <span style="color: #333399; font-weight: bold">float</span>(samples);
+
+	<span style="color: #008800; font-weight: bold">if</span>(byp<span style="color: #333333">==</span><span style="color: #0000DD; font-weight: bold">2</span>){
+		gl_FragColor <span style="color: #333333">=</span> vec4(vec3(occlusion),<span style="color: #6600EE; font-weight: bold">1.0</span>);
+	}
+	<span style="color: #008800; font-weight: bold">else</span> <span style="color: #008800; font-weight: bold">if</span>(byp<span style="color: #333333">==</span><span style="color: #0000DD; font-weight: bold">1</span>){
+		gl_FragColor <span style="color: #333333">=</span> vec4(normal<span style="color: #333333">*</span><span style="color: #6600EE; font-weight: bold">0.5</span><span style="color: #333333">+</span><span style="color: #6600EE; font-weight: bold">0.5</span>,<span style="color: #6600EE; font-weight: bold">1.0</span>);
+	}
+	<span style="color: #008800; font-weight: bold">else</span>{
+		gl_FragColor <span style="color: #333333">=</span> vec4(texture2D(screenTexture, vUv).rgb<span style="color: #333333">*</span>occlusion,<span style="color: #6600EE; font-weight: bold">1.0</span>);
+	}
+}
+</pre></div>
 	</article></section>
     </body>
 </html>
 <script>
-    function setFxaa(bool){
-        fxaaPass.active = !bool;
-    }
-    
     function changeStep(value){
-        fxaaPass.step = value;
+        ssaoPass.step = value;
     }
     
     /*global THREE, sphere*/
@@ -118,9 +223,9 @@
     var composer = new THREE.EffectComposer( renderer );
 	composer.addPass( new THREE.RenderPass( scene, camera ) );
 
-	var fxaaPass = new THREE.SSAOPass( scene, camera, screen.width/2, screen.height/2);
-	fxaaPass.renderToScreen = true;
-	composer.addPass( fxaaPass );
+	var ssaoPass = new THREE.SSAOPass( scene, camera, screen.width/2, screen.height/2);
+	ssaoPass.renderToScreen = true;
+	composer.addPass( ssaoPass );
 	
     var clock = new THREE.Clock();
     

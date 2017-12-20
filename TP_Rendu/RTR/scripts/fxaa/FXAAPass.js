@@ -306,7 +306,7 @@ THREE.FXAAPass = function ( ) {
 	this.scene.add( this.quad );
 
 	this.active = false;
-	this.step = 1;
+	this.step = 7;
 };
 
 THREE.FXAAPass.prototype = Object.assign( Object.create( THREE.Pass.prototype ), {

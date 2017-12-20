@@ -38,6 +38,7 @@
 		<a href="index.html#fxaa"><< Retour</a>
         <h1>FXAA</h1>
         <select selected="7" autocomplete=off onchange="changeStep(this.value)">>
+          <option value="7">FXAA</option>
           <option value="1">FXAA_DEBUG_PASSTHROUGH</option>
           <option value="2">FXAA_DEBUG_HORZVERT</option>
           <option value="3">FXAA_DEBUG_PAIR</option>
@@ -46,7 +47,6 @@
           <option value="9">FXAA_DEBUG_OFFSET_VALUE</option>
           <option value="6">FXAA_DEBUG_LOWPASS</option>
           <option value="8">FXAA_DEBUG_LUMA</option>
-          <option value="7">FXAA</option>
         </select>
         <label><input type="checkbox" autocomplete=off checked=true onchange="setFxaa(this.checked)" name="fxaa" value="fxaa">FXAA</label><br>
         <div id="scene"></div>

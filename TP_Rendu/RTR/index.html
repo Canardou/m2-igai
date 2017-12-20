@@ -10,7 +10,9 @@
 				Hachette Olivier
 				<h1>Rapport de rendu temps réel</h1>
 				<p>Tous les projets utilisent THREE.js comme librairie pour la gestion de la géométrie et du rendu.</p>
-				<h2 id="loop">Loop Subdivision</h2><br>
+				
+				<h2 id="loop">Loop Subdivision</h2>
+				<p><a href="loop.html">Voir le code en action</a></p>
 				<p>Ce projet implémente le schéma de subdivision de Loop pour les maillages triangulaires.
 				A chaque itération on créé 3 nouveaux points se trouvant sur les bords des triangles déjà existants et on déplace les anciens points.</p>
 				<p>Le code se divise donc en quatres parties distinctes :
@@ -47,20 +49,21 @@
 				</figure>
 				<p>Le nombre de pas de subdivision peut être selectionné ainsi que la géométrie initiale et l'affichage des arrêtes ou non.</p>
 				<p>La gestion des bords n'a pas été implémentée car la représentation des données était déjà un peu fastidieuse en JavaScript.</p>
-				<p><a href="loop.html">Voir le code en action</a></p>
-				<h2 id="implicit">Implicit Surfaces</h2><br>
+				
+				<h2 id="implicit">Implicit Surfaces</h2>
+				<p><a href="implicit.html">Voir le code en action</a></p>
 				<p>L'algorithme du marching cubes permet la visualisation des surfaces implicites.
 				En effet ces dernières sont caractérisées à partir d'une équation, donc elles ne sont pas directement visible à l'écran.
 				<br>
 				On partage l'espace à une certaine résolution, dans notre cas l'espace est un cube de taille 1x1x1 et la résolution initiale 12.
 				Pour chaque point de cet espace on calcule la somme des fonctions caractérisant nos objets, ici des metaballs (caractérisées par une fonction custom).
 				Cela nous permet de déduire quels sommets sont à l'intérieur ou à l'extérieur de notre seuil.</p>
-				<figure>
-					<img src="images/MarchingCubes.png" width="35%" align="right">
-					<figcaption style="clear:both;float:right;width:35%" >Figure 3 : Les 15 cas possibles <br> Source : Wikipedia</figcaption>
-				</figure>
 				<p>Pour chaque configuration de sommets à l'intérieur ou à l'extérieur de notre surface il y a 15 cas possibles (et leurs symétriques).
 				On a alors 256 cas possibles qui sont stockés dans un tableau. Ce dernier donne les tirangles à tracer depuis les demi-arrêtes pour chaque cas.</p>
+				<figure>
+					<img src="images/MarchingCubes.png">
+					<figcaption>Figure 3 : Les 15 cas possibles <br> Source : Wikipedia</figcaption>
+				</figure>
 				<p>On trouve ainsi à l'aide d'une valeur calculée sur 8 bits, l'index qu'il faut utiliser dans cette table pour tracer les triangles dans le sous-cube exploré.</p>
 				<p>Si on s'arrête ici le résultat se présente de cette façon :</p>
 				<figure>
@@ -73,8 +76,9 @@
 					<img src="images/implicit_2.png" width="65%">
 					<figcaption>Figure 5 : Résultat final avec la présence de 3 metaballs</figcaption>
 				</figure>
-				<p><a href="implicit.html">Voir le code en action</a></p>
-				<h2 id="fxaa">Fast Approximated Anti-Aliasing</h2><br>
+				
+				<h2 id="fxaa">Fast Approximated Anti-Aliasing</h2>
+				<p><a href="fxaa.html">Voir le code en action</a></p>
 				<p>On s'intéresse à l'algorithme FXAA.</p>
 				<p>L'agorithme est implémentée à l'aide d'un shader qui s'applique sur la texture de l'écran récupérée après un premier rendu.
 				Il est très rapide comme il repose sur une étude de la luminosité et une détection sommaire des bords, à l'inverse des autres algorithmes d'anti-aliasing qui reposent souvent sur plusieurs rendus.</p>
@@ -94,10 +98,29 @@
 				<p><em>FXAA_DEBUG_OFFSET</em> : montre un mélange entre les deux précédentes images et n'est pas forcément très lisible mais reproduit les exemples fournis par NVIDIA sur son papier.<br>
 				<em>FXAA_DEBUG_LOWPASS</em> : c'est une vue "custom" qui permet de voir les endroits où a été utilisée la fonction de filtre proposée dans le papier de NVIDIA. Elle est utilisée si elle dépasse la valeur calculée à la dernière étape de l'image précédente.<br>
 				Les deux dernières images montrent le résultat, avec à gauche le rendu filtré.</p>
-				<p><a href="fxaa.html">Voir le code en action</a></p>
-				<h2 id="ssao">Screen-Space Ambient Occlusion</h2><br>
 				
+				<h2 id="ssao">Bonus : Screen-Space Ambient Occlusion</h2>
 				<p><a href="ssao.html">Voir le code en action</a></p>
+				<p>L'algorithme SSAO repose sur l'exploitation du z-buffer. On récupère la scène rendue et la depth map associée. l'algorithme se décompose ensuite en 3 étapes :<a href="mailto:"></a></p>
+				<ol>
+					<li>Calcul de la normal map</li>
+					<ul>
+						<li>En utilisant la depth map on peut retrouver la normale en chaque point de l'image</li>
+					</ul>
+					<li>Generation d'une hémisphère de points, ici 16 points, autour du point étudié et orientée selon la normale</li>
+					<ul></ul>
+					<li>Pour chacun des points on compare sa profondeur avec celle de la depth map</li>
+					<ul>
+						<li>Si elle est inférieur à cette dernière alors le point est occulté</li>
+						<li>On vérifie tout de même que la différence n'est pas supérieur à un seuil pour ne pas créer de l'occlusion entre deux objets distants</li>
+					</ul>
+				</ol>
+				<figure>
+					<img src="images/ssao.png">
+					<figcaption>Figure 8 : Rendu traité, non traité et inverse de l'occlusion map</figcaption>
+				</figure>
+				<p>Un traitement supplémentaire, qui n'a pas été effecuté, serait de flouter la texture d'occlusion obtenue avant de l'appliquer à la scène. Cela permet de réduire l'impression de bruit venant du nombres de points utilisés pour calculer l'occlusion.</p>
+				
 			</article>
 		</section>
     </body>
