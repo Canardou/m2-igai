@@ -63,8 +63,8 @@ ylabel('Signal')
 mat = spectrogram(s,fe,1024,128,1024);
 
 function mat = spectrogram(signal, fe, window, overlap, Nfft)
-    step = floor(size(signal,2)/(window-2*overlap));
-    echantillons = 1:step:size(signal,2)-(window);
+    %step = floor(size(signal,2)/(window-2*overlap));
+    echantillons = 1:overlap:size(signal,2)-(window);
     mat = zeros(size(echantillons,2),Nfft/2);
     for k = 1:size(echantillons,2)
         fft_tot = abs(fft(signal(1,echantillons(k):echantillons(k)+window),Nfft));
