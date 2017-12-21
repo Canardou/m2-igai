@@ -4,8 +4,8 @@
 		<meta charset="UTF-8">
 		<link rel="stylesheet" href="css/tacit-css-1.1.1.css"/>
         <script id="vertexShader" type="x-shader/x-vertex">
-        uniform vec3 uBonesPosition[ 4 ];
-        uniform mat4 uBonesTransformation[ 4 ];
+        uniform vec3 uBonesPosition[ BONES ];
+        uniform mat4 uBonesTransformation[ BONES ];
         
         varying vec3 vNormal;
         attribute vec4 bones;
@@ -13,15 +13,16 @@
         
         void main() {
             vNormal = vec3(weights[0],weights[1],0.0);
-            mat4 boneTransform =
-                ( uBonesTransformation[ int(bones[0]) ] * weights[0] ) +
-                ( uBonesTransformation[ int(bones[1]) ] * weights[1] ) +
-                ( uBonesTransformation[ int(bones[2]) ] * weights[2] ) +
-                ( uBonesTransformation[ int(bones[3]) ] * weights[3] );
+            vec4 wPosition = vec4(0.0);
+            
+            for (int i = 0; i < 4; i++) {
+                wPosition += weights[i] * (
+                                uBonesTransformation[ int(bones[i]) ] *
+                                vec4( position, 1.0));
+            }
             mat4 mv = projectionMatrix * 
                         modelViewMatrix;
-            gl_Position =  mv * boneTransform *
-                        vec4(position,1.0);
+            gl_Position =  mv * wPosition;
         }
         </script>
         <script id="fragmentShader" type="x-shader/x-fragment">
@@ -48,7 +49,7 @@
     
     /*global THREE*/
     
-    var geometry = new THREE.CylinderGeometry( 1, 1, 10, 16, 8 );
+    var bufferGeometry = new THREE.CylinderBufferGeometry( 1, 1, 10, 16, 8 );
 
     var scene = new THREE.Scene();
 
@@ -72,16 +73,35 @@
        constructor(x,y,z){
            this.position = new THREE.Vector3(x,y,z);
            this.transformation = (new THREE.Matrix4()).identity();
+           this.parent = null;
+       }
+       
+       getPosition(){
+           //Position shouldn't change
+           return this.position;
+       }
+       
+       getTransformation(){
+           //Should take into account parent
+           var transformation = this.transformation.clone();
+           transformation.multiply(new THREE.Matrix4().makeTranslation(-this.position.x,-this.position.y,-this.position.z));
+           
+           if(this.parent != null){
+                var translation = new THREE.Matrix4().makeTranslation(this.position.x-this.parent.position.x,this.position.y-this.parent.position.y,this.position.z-this.parent.position.z);
+                var translation2 = new THREE.Matrix4().makeTranslation(this.parent.position.x,this.parent.position.y,this.parent.position.z);
+                var transformationClone = this.parent.getTransformation();
+                return translation2.multiply(translation.multiply(transformationClone)).multiply(transformation);
+           }
+           return transformation;
        }
     }
     
-    var bufferGeometry = new THREE.BufferGeometry().fromGeometry( geometry );
-    
     var bonesGeometry = [];
     var tmp_bone = new Bone(0,0,0);
-    //tmp_bone.transformation.makeRotationZ(0.7);
+    //need 4 bones minimum
+    tmp_bone.parent = new Bone(0,5.1,0);
+    bonesGeometry.push(tmp_bone.parent);
     bonesGeometry.push(tmp_bone);
-    bonesGeometry.push(new Bone(0,5.1,1));
     bonesGeometry.push(new Bone(0,0,0));
     bonesGeometry.push(new Bone(0,0,0));
     
@@ -89,10 +109,13 @@
     var uBonesTransformation = [];
     for(var k in bonesGeometry){
         uBonesPosition.push(bonesGeometry[k].position);
-        uBonesTransformation.push(bonesGeometry[k].transformation);
+        uBonesTransformation.push(bonesGeometry[k].getTransformation());
     }
     
     var material = new THREE.ShaderMaterial({
+        defines: {
+        	BONES: bonesGeometry.length
+        },
         uniforms: {
             uBonesPosition: { type: "v3v", value: uBonesPosition },
             uBonesTransformation: { type: "m4v", value: uBonesTransformation }
@@ -146,7 +169,12 @@
       requestAnimationFrame(animloop);
       camControls.update(clock.getDelta());
       render();
-      uBonesTransformation[1].makeRotationZ(clock.getElapsedTime()).multiply(new THREE.Matrix4().makeTranslation(5,0,0));
+      bonesGeometry[0].transformation.makeRotationZ(clock.getElapsedTime());
+      bonesGeometry[1].transformation.makeRotationZ(clock.getElapsedTime());
+      uBonesTransformation[0] = bonesGeometry[0].getTransformation();
+      uBonesTransformation[1] = bonesGeometry[1].getTransformation();
+      uBonesPosition[0] = bonesGeometry[0].getPosition();
+      uBonesPosition[1] = bonesGeometry[1].getPosition();
     })();
     
     function render(){
