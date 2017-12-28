@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html>
+    <head>
+		<meta charset="UTF-8">
+		<link rel="stylesheet" href="css/tacit-css-1.1.1.css"/>
+        <script id="vertexShader" type="x-shader/x-vertex">
+        uniform vec4 uBonesQuatRotation[ BONES ];
+        uniform vec4 uBonesQuatTranslat[ BONES ];
+        uniform mat4 uBonesTransformation[ BONES ];
+        uniform bool linear;
+        
+        varying vec3 vNormal;
+        attribute vec4 bones;
+        attribute vec4 weights;
+        
+        void main() {
+            vNormal = vec3(weights[1],weights[2],weights[3]);
+            mat4 mv = projectionMatrix * 
+                        modelViewMatrix;
+            
+            if(linear){
+                vec4 wPosition = vec4(0.0);
+                
+                for (int i = 0; i < 4; i++) {
+                    wPosition += weights[i] * (
+                                    uBonesTransformation[ int(bones[i]) ] *
+                                    vec4( position, 1.0));
+                }
+                gl_Position =  mv * wPosition;
+            }
+            else{
+                vec4 wRotQuat = vec4(0.0);
+                for (int i = 0; i < 4; i++) {
+                    wRotQuat += uBonesQuatRotation[int(bones[i])] * weights[i];
+                }
+                
+                vec4 wTransQuat = vec4(0.0);
+                for (int i = 0; i < 4; i++) {
+                    wTransQuat += uBonesQuatTranslat[int(bones[i])] * weights[i];
+                }
+                
+                float xRot = wRotQuat[0];
+                float yRot = wRotQuat[1];
+                float zRot = wRotQuat[2];
+                float wRot = wRotQuat[3];
+                
+                float length = sqrt(xRot * xRot + yRot * yRot
+                + zRot * zRot + wRot * wRot);
+                wRotQuat = wRotQuat / length;
+                wTransQuat = wTransQuat / length;
+                
+                float xR = wRotQuat[0];
+                float yR = wRotQuat[1];
+                float zR = wRotQuat[2];
+                float wR = wRotQuat[3];
+                float xT = wTransQuat[0];
+                float yT = wTransQuat[1];
+                float zT = wTransQuat[2];
+                float wT = wTransQuat[3];
+                
+                float t0 = 2.0 * (-wT * xR + xT * wR - yT * zR + zT * yR);
+                float t1 = 2.0 * (-wT * yR + xT * zR + yT * wR - zT * xR);
+                float t2 = 2.0 * (-wT * zR - xT * yR + yT * xR + zT * wR);
+                mat4 weightedJointMatrix = mat4(
+                    1.0 - (2.0 * yR * yR) - (2.0 * zR * zR),
+                    (2.0 * xR * yR) + (2.0 * wR * zR),
+                    (2.0 * xR * zR) - (2.0 * wR * yR),
+                    0,
+                    (2.0 * xR * yR) - (2.0 * wR * zR),
+                    1.0 - (2.0 * xR * xR) - (2.0 * zR * zR),
+                    (2.0 * yR * zR) + (2.0 * wR * xR),
+                    0,
+                    (2.0 * xR * zR) + (2.0 * wR * yR),
+                    (2.0 * yR * zR) - (2.0 * wR * xR),
+                    1.0 - (2.0 * xR * xR) - (2.0 * yR * yR),
+                    0,
+                    t0,
+                    t1,
+                    t2,
+                    1
+                    );
+                
+                gl_Position =  mv * weightedJointMatrix * vec4( position, 1.0);
+                  
+                //vec3 blendedNormal = uNMatrix * 
+                //  (weightedMatrix * vec4(aVertexNormal, 0.0)).xyz;
+            }
+        }
+        </script>
+        <script id="fragmentShader" type="x-shader/x-fragment">
+        varying vec3 vNormal;
+        
+        void main() {
+            gl_FragColor = vec4(vNormal.x*.5+.5,vNormal.y*.5+.5,vNormal.z*.5+.5,1.0);
+        }
+        </script>
+        <script src="scripts/three.min.js"></script>
+        <script src="scripts/trackball.js"></script>
+    </head>
+    <body>
+		<section><article>
+        <h1>Bones</h1>
+        <input type="radio" id="linear" name="blending" value="linear" onchange="material.uniforms.linear.value=true;" checked><label for="linear">Linear</label> - <input type="radio" id="dual" name="blending" value="dual" onchange="material.uniforms.linear.value=false;"><label for="dual">Dual</label>
+        <div id="scene"></div>
+        <em>Variables/Fuctions : t, pi, cos, sin</em><br>
+        <table>
+            <tr>
+                <th>
+                    Axis
+                </th>
+                <th>
+                    Parent (Red)
+                </th>
+                <th>
+                    Child (Green)
+                </th>
+                <th>
+                    End (Blue)
+                </th>
+            </tr>
+            <tr>
+                <th>
+                    X
+                </th>
+                <td>
+                    <input type="text" id="PX" value="0"></input>
+                </td>
+                <td>
+                    <input type="text" id="CX" value="0"></input>
+                </td>
+                <td>
+                    <input type="text" id="EX" value="0"></input>
+                </td>
+            </tr>
+            <tr>
+                <th>
+                    Y
+                </th>
+                <td>
+                    <input type="text" id="PY" value="0"></input>
+                </td>
+                <td>
+                    <input type="text" id="CY" value="0"></input>
+                </td>
+                <td>
+                    <input type="text" id="EY" value="0"></input>
+                </td>
+            </tr>
+            <tr>
+                <th>
+                    Z
+                </th>
+                <td>
+                    <input type="text" id="PZ" value="0"></input>
+                </td>
+                <td>
+                    <input type="text" id="CZ" value="0"></input>
+                </td>
+                <td>
+                    <input type="text" id="EZ" value="t"></input>
+                </td>
+            </tr>
+            <tr>
+                <th>
+                    Translation
+                </th>
+                <td>
+                    <input type="text" id="PT" value="0,0,0"></input>
+                </td>
+                <td>
+                    <input type="text" id="CT" value="0,0,0"></input>
+                </td>
+                <td>
+                    <input type="text" id="ET" value="0,0,0"></input>
+                </td>
+            </tr>
+        </table>
+	    </article></section>
+    </body>
+</html>
+<script>
+    /*global THREE*/
+    
+    //var bufferGeometry = new THREE.CylinderBufferGeometry( 2, 2, 10, 16, 20 );
+    var mesh = null;
+    function initMesh() {
+        var loader = new THREE.JSONLoader();
+        loader.load('marvin.json', function(geometry) {
+            mesh = new THREE.Mesh(geometry);
+            scene.add(mesh);
+        });
+    }
+    
+    var bufferGeometry = new THREE.BoxBufferGeometry( 1, 10, 1, 5, 20, 5 );
+
+    var scene = new THREE.Scene();
+    var bonesScene = new THREE.Scene();
+
+    var renderer = new THREE.WebGLRenderer();
+    renderer.autoClear = false;
+
+    renderer.setSize(700, 400);
+    
+    var domElem = document.getElementById("scene").appendChild(renderer.domElement);
+    
+    var camera = new THREE.PerspectiveCamera(40, 700 / 400, 0.1, 15000);
+    camera.position.set(0, 0, 20);
+    camera.lookAt(new THREE.Vector3(0, 0, 0));
+    
+    class Bone{
+       constructor(x,y,z,r,parent,color){
+           this.position = new THREE.Vector3(x,y,z);
+           this.transformation = (new THREE.Matrix4()).identity();
+           this.parent = parent;
+           //Weight calculation
+           this.radius = r;
+           //Cool color
+           this.color = color;
+       }
+       
+       getPosition(){
+           return this.position;
+       }
+       
+       getTransformation(){
+           var current = this;
+           var transformation = new THREE.Matrix4();
+           var inverseTranslation = new THREE.Matrix4();
+           var to_treat = [];
+           while(current != null){
+               to_treat.unshift(current);
+               current = current.parent;
+           }
+           for(var x in to_treat){
+               current = to_treat[x];
+               if(current.parent != null)
+                transformation.multiply(new THREE.Matrix4().makeTranslation(current.position.x-current.parent.position.x,current.position.y-current.parent.position.y,current.position.z-current.parent.position.z));
+               else
+                transformation.multiply(new THREE.Matrix4().makeTranslation(current.position.x,current.position.y,current.position.z));
+               
+               transformation.multiply(current.transformation);
+               
+               if(current.parent != null)
+                inverseTranslation.multiply(new THREE.Matrix4().makeTranslation(current.parent.position.x-current.position.x,current.parent.position.y-current.position.y,current.parent.position.z-current.position.z))
+               else
+                inverseTranslation.multiply(new THREE.Matrix4().makeTranslation(-current.position.x,-current.position.y,-current.position.z))
+           }
+           transformation.multiply(inverseTranslation);
+           return transformation;
+       }
+    }
+    
+    var bonesGeometry = [];
+    var base_bone = new Bone(0,0,0,0,null);
+    var bone_1 = new Bone(0,5.1,0,8,base_bone,0xff0000);
+    var bone_2 = new Bone(0,0,0,0,bone_1,0x00ff00);
+    var bone_3 = new Bone(0,-5.1,0,8,bone_2,0x0000ff);
+
+    bonesGeometry.push(base_bone);
+    bonesGeometry.push(bone_1);
+    bonesGeometry.push(bone_2);
+    bonesGeometry.push(bone_3);
+    
+    var uBonesQuatRotation = [];
+    var uBonesQuatTranslat = [];
+    var uBonesTransformation = [];
+    for(var k = 0; k < bonesGeometry.length; k++){
+        var transfo = bonesGeometry[k].getTransformation();
+        uBonesTransformation[k] = transfo;
+        var dual = mat2dual(transfo);
+        uBonesQuatRotation[k] = dual.rotation;
+        uBonesQuatTranslat[k] = dual.translation;
+    }
+    
+    function mat2dual(mat){
+        var rotationQuat = new THREE.Quaternion();
+        var translationQuat = new THREE.Quaternion(mat.elements[12], mat.elements[13], mat.elements[14], 0.0);
+        rotationQuat.setFromRotationMatrix(mat);
+        if(rotationQuat.w < 0){
+            rotationQuat.w *= -1;
+            rotationQuat.x *= -1;
+            rotationQuat.y *= -1;
+            rotationQuat.z *= -1;
+        }
+
+        translationQuat.multiplyQuaternions(translationQuat, rotationQuat);
+        translationQuat.x = translationQuat.x/2;
+        translationQuat.y = translationQuat.y/2;
+        translationQuat.z = translationQuat.z/2;
+        translationQuat.w = translationQuat.w/2;
+        
+        return {rotation:rotationQuat, translation:translationQuat};
+    }
+    
+    var material = new THREE.ShaderMaterial({
+        defines: {
+        	BONES: bonesGeometry.length
+        },
+        uniforms: {
+            uBonesQuatRotation: { type: "v4v", value: uBonesQuatRotation },
+            uBonesQuatTranslat: { type: "v4v", value: uBonesQuatTranslat },
+            uBonesTransformation: { type: "m4v", value: uBonesTransformation },
+            linear: { value:true }
+        },
+    	vertexShader: document.getElementById( 'vertexShader' ).textContent,
+    	fragmentShader: document.getElementById( 'fragmentShader' ).textContent
+    });
+    
+    var vertices = bufferGeometry.attributes.position;
+    var bones = [];
+    var weights = [];
+    
+    //Calculate weights (4 max per vertex) once only !
+    for(var i = 0; i < vertices.count; i++){
+        var current = new THREE.Vector3(vertices.getX(i),vertices.getY(i),vertices.getZ(i));
+        //Find closest 4
+        
+        //Calculate weights
+        var unWeights = [];
+        var total = 0;
+        for(var j=0; j<bonesGeometry.length; j++){
+            var bone = bonesGeometry[j];
+            var dist = current.distanceTo(bone.position);
+            if(dist < bone.radius){
+                unWeights[j] = (bone.radius-dist)/bone.radius;
+                total += unWeights[j];
+            }
+            else
+                unWeights[j] = 0;
+        }
+        unWeights.forEach((e, i, a) => a[i] = e/total);
+        weights = weights.concat(unWeights);
+        bones = bones.concat([0,1,2,3]);
+    }
+    bones = new Uint8Array(bones);
+    weights = new Float32Array(weights);
+    
+    // itemSize = 3 because there are 3 values (components) per vertex
+    bufferGeometry.addAttribute( 'weights', new THREE.BufferAttribute( weights, 4) );
+    bufferGeometry.addAttribute( 'bones', new THREE.BufferAttribute( bones, 4) );
+    
+    var mesh = new THREE.Mesh( bufferGeometry, material );
+    
+    scene.add(mesh);
+    //scene.add(wireframe);
+        
+    var camControls = new THREE.TrackballControls( camera, domElem );
+	camControls.rotateSpeed = 5.0;
+	camControls.zoomSpeed = 1.2;
+	camControls.panSpeed = 0.8;
+	camControls.noZoom = false;
+	camControls.noPan = false;
+	camControls.staticMoving = true;
+	camControls.dynamicDampingFactor = 0.3;
+	camControls.keys = [ 65, 83, 68 ];
+	camControls.addEventListener( 'change', render );
+    
+    var clock = new THREE.Clock();
+    
+    (function animloop(){
+      requestAnimationFrame(animloop);
+      camControls.update(clock.getDelta());
+      
+        for(var k = 0; k < bonesGeometry.length; k++){
+            var transfo = bonesGeometry[k].getTransformation();
+            uBonesTransformation[k] = transfo;
+            var dual = mat2dual(transfo);
+            uBonesQuatRotation[k] = dual.rotation;
+            uBonesQuatTranslat[k] = dual.translation;
+        }
+      
+      render();
+      var t = clock.getElapsedTime();
+      var pi = Math.PI;
+      var cos = Math.cos;
+      var sin = Math.sin;
+      
+      bonesGeometry[1].transformation.makeRotationX(eval(document.getElementById("PX").value));
+      bonesGeometry[1].transformation.multiply(new THREE.Matrix4().makeRotationY(eval(document.getElementById("PY").value)));
+      bonesGeometry[1].transformation.multiply(new THREE.Matrix4().makeRotationZ(eval(document.getElementById("PZ").value)));
+      eval("bonesGeometry[1].transformation.multiply(new THREE.Matrix4().makeTranslation("+document.getElementById("PT").value+"))");
+      
+      bonesGeometry[2].transformation.makeRotationX(eval(document.getElementById("CX").value));
+      bonesGeometry[2].transformation.multiply(new THREE.Matrix4().makeRotationY(eval(document.getElementById("CY").value)));
+      bonesGeometry[2].transformation.multiply(new THREE.Matrix4().makeRotationZ(eval(document.getElementById("CZ").value)));
+      eval("bonesGeometry[2].transformation.multiply(new THREE.Matrix4().makeTranslation("+document.getElementById("CT").value+"))");
+      
+      bonesGeometry[3].transformation.makeRotationX(eval(document.getElementById("EX").value));
+      bonesGeometry[3].transformation.multiply(new THREE.Matrix4().makeRotationY(eval(document.getElementById("EY").value)));
+      bonesGeometry[3].transformation.multiply(new THREE.Matrix4().makeRotationZ(eval(document.getElementById("EZ").value)));
+      eval("bonesGeometry[3].transformation.multiply(new THREE.Matrix4().makeTranslation("+document.getElementById("ET").value+"))");
+      
+    })();
+    
+    function render(){
+        renderer.clear();
+		renderer.render( scene, camera );
+		renderer.clearDepth();
+		renderer.render( bonesScene, camera );
+    }
+</script>
