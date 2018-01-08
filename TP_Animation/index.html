@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html>
+    <head>
+		<meta charset="UTF-8">
+		<link rel="stylesheet" href="css/tacit-css-1.1.1.css"/>
+	</head>
+    <body>
+		<section>
+			<article>
+				Hachette Olivier
+				<h1>Rapport d'animation</h1>
+				<p>Tous les projets utilisent THREE.js comme librairie pour la gestion de la géométrie et du rendu.</p>
+				
+				<h2>Squelette</h2>
+				<p>La gestion du squelette est effectuée à l'aide d'un classe réimplémentée de "Bones", en effet il existe déjà une gestion du squelette dans THREE.js</p>
+				<p>Nos spécifications sont tels que :
+				<ol>
+					<li>Un os dispose d'une zone d'influence sphérique, son influence décroit avec la distance</li>
+					<li>Les os sont organisés selon une hierarchie, chaque os dispose d'un parent sauf l'os initial</li>
+					<li>Un vertex ne peut être influencé que par 4 os au maximum (2 aurait pu suffire)</li>
+					<li>Les os doivent disposer d'une interface de débug (affichage de la zone d'influence et du parent)</li>
+				</ol>
+				</p>
+				<p>Finalement notre os peut être appelé avec un constructeur assez simple qui prends en entrée une position x,y,z, un rayon d'influence en son centre, son parent et une couleur pour le debug</p>
+				<p>On notera que du fait que l'influence est calculée automatiquement, on doit passer par deux structures d'os pour avoir un comportement réaliste d'animation, un premier os sert de rotule tandis qu'un second (enfant du premier) génère l'air d'influence à un certaine distance. Dans la figure 1, on peut voir que l'os en vert n'a pas de zone d'influence dans ce but, il y a 3 os dans cet exemple, le rouge, le vert et le bleu.</p>
+				<figure id="figure1">
+					<img src="images/bones_example.png" width="65%">
+					<figcaption>Figure 1 : Exemple simple</figcaption>
+				</figure>
+				
+				<h2>Matrice de rotation et Quaternion</h2>
+				<p>Comme JavaScript est plutôt lent, on implémente immédiatemment la gestion du blending à l'aide du GPU.</p>
+				<p>Il existe deux façons de représenter les rotations et les translations, par des matrices de rotations 4x4 ou par des duals quaternion. Les deux méthodes ont leur avantages et leurs defauts. Dans les deux nous mettons en place un linear blending avec au maximum deux os (il est possible d'en avoir plus avec le code fourni mais cela génère des résultats peu estétiques).</p>
+				<p>Dans le cas d'une interpolation par matrice de rotation, on peut voir apparaître un écrasement au niveau du point de rotation. Cela donne l'impression qu'on pli une paille (Figure 2) et peut poser problème pour l'animation des membres de personnages un peu épais.</p>
+				<figure id="figure2">
+					<img src="images/matrix.png" width="35%">
+					<figcaption>Figure 2 : Interpolation linéaire avec matrices de rotations</figcaption>
+				</figure>
+				
+				<p>Dans le cas d'une interpolation via les duals quaternions, on voir apapraître un coude au niveau du point de rotation. Comme nous faisons une interpolation linéaire et non pas un slerp, des artefacts peuvent apparaître (la rotation interpolée n'est pas la rotation la plus courte).</p>
+				<figure id="figure3">
+					<img src="images/quat.png" width="35%">
+					<figcaption>Figure 3 : Interpolation linéaire avec dual quaternions</figcaption>
+				</figure>
+				
+				<figure id="figure4">
+					<img src="images/marvin.png" width="35%">
+					<figcaption>Figure 4 : Marvin et son squelette</figcaption>
+				</figure>
+				<p><a href="simple.html">Voir l'exemple simple</a></p>
+				<p><a href="marvin.html">Voir marvin danser</a></p>
+			</article>
+		</section>
+    </body>
+</html>

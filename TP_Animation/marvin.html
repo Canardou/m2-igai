@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html>
+    <head>
+		<meta charset="UTF-8">
+		<link rel="stylesheet" href="css/tacit-css-1.1.1.css"/>
+        <script id="vertexShader" type="x-shader/x-vertex">
+        uniform vec4 uBonesQuatRotation[ BONES ];
+        uniform vec4 uBonesQuatTranslat[ BONES ];
+        uniform mat4 uBonesTransformation[ BONES ];
+        uniform bool linear;
+        
+        varying vec3 vNormal;
+        varying vec2 vUv;
+        attribute vec4 bones;
+        attribute vec4 weights;
+        
+        void main() {
+            vNormal = normal;
+            vUv = uv;
+            mat4 mv = projectionMatrix * 
+                        modelViewMatrix;
+            
+            if(linear){
+                vec4 wPosition = vec4(0.0);
+                
+                for (int i = 0; i < 4; i++) {
+                    wPosition += weights[i] * (
+                                    uBonesTransformation[ int(bones[i]) ] *
+                                    vec4( position, 1.0));
+                }
+                gl_Position =  mv * wPosition;
+            }
+            else{
+                vec4 wRotQuat = vec4(0.0);
+                for (int i = 0; i < 4; i++) {
+                    wRotQuat += uBonesQuatRotation[int(bones[i])] * weights[i];
+                }
+                
+                vec4 wTransQuat = vec4(0.0);
+                for (int i = 0; i < 4; i++) {
+                    wTransQuat += uBonesQuatTranslat[int(bones[i])] * weights[i];
+                }
+                
+                float xRot = wRotQuat[0];
+                float yRot = wRotQuat[1];
+                float zRot = wRotQuat[2];
+                float wRot = wRotQuat[3];
+                
+                float length = sqrt(xRot * xRot + yRot * yRot
+                + zRot * zRot + wRot * wRot);
+                wRotQuat = wRotQuat / length;
+                wTransQuat = wTransQuat / length;
+                
+                float xR = wRotQuat[0];
+                float yR = wRotQuat[1];
+                float zR = wRotQuat[2];
+                float wR = wRotQuat[3];
+                float xT = wTransQuat[0];
+                float yT = wTransQuat[1];
+                float zT = wTransQuat[2];
+                float wT = wTransQuat[3];
+                
+                float t0 = 2.0 * (-wT * xR + xT * wR - yT * zR + zT * yR);
+                float t1 = 2.0 * (-wT * yR + xT * zR + yT * wR - zT * xR);
+                float t2 = 2.0 * (-wT * zR - xT * yR + yT * xR + zT * wR);
+                mat4 weightedJointMatrix = mat4(
+                    1.0 - (2.0 * yR * yR) - (2.0 * zR * zR),
+                    (2.0 * xR * yR) + (2.0 * wR * zR),
+                    (2.0 * xR * zR) - (2.0 * wR * yR),
+                    0,
+                    (2.0 * xR * yR) - (2.0 * wR * zR),
+                    1.0 - (2.0 * xR * xR) - (2.0 * zR * zR),
+                    (2.0 * yR * zR) + (2.0 * wR * xR),
+                    0,
+                    (2.0 * xR * zR) + (2.0 * wR * yR),
+                    (2.0 * yR * zR) - (2.0 * wR * xR),
+                    1.0 - (2.0 * xR * xR) - (2.0 * yR * yR),
+                    0,
+                    t0,
+                    t1,
+                    t2,
+                    1
+                    );
+                
+                gl_Position =  mv * weightedJointMatrix * vec4( position, 1.0);
+                  
+                //vec3 blendedNormal = uNMatrix * 
+                //  (weightedMatrix * vec4(aVertexNormal, 0.0)).xyz;
+            }
+        }
+        </script>
+        <script id="fragmentShader" type="x-shader/x-fragment">
+        uniform sampler2D texture;
+        
+        varying vec3 vNormal;
+        varying vec2 vUv;
+        
+        void main() {
+            gl_FragColor = texture2D(texture, vUv);//*vec4(vNormal*.5+.5,1.0);
+            //gl_FragColor = vec4(vNormal.x*.5+.5,vNormal.y*.5+.5,vNormal.z*.5+.5,1.0);
+        }
+        </script>
+        <script src="scripts/three.min.js"></script>
+        <script src="scripts/trackball.js"></script>
+        <script src="scripts/bones.js"></script>
+    </head>
+    <body>
+		<section><article>
+        <h1>Marvin</h1>
+        <input type="radio" id="linear" name="blending" value="linear" onchange="material.uniforms.linear.value=true;" checked><label for="linear">Linear</label> - <input type="radio" id="dual" name="blending" value="dual" onchange="material.uniforms.linear.value=false;"><label for="dual">Dual</label>
+        <div id="scene"></div>
+	    </article></section>
+    </body>
+</html>
+<script>
+    /*global THREE*/
+    
+    //var bufferGeometry = new THREE.CylinderBufferGeometry( 2, 2, 10, 16, 20 );
+    var mesh = null;
+    var material;
+    function initMesh() {
+        var loader = new THREE.JSONLoader();
+        loader.load('marvin.json', function(geometry) {
+            var bufferGeometry = new THREE.BufferGeometry().fromGeometry( geometry );
+            var scene = new THREE.Scene();
+            var bonesScene = new THREE.Scene();
+        
+            var renderer = new THREE.WebGLRenderer();
+            renderer.autoClear = false;
+        
+            renderer.setSize(700, 400);
+            
+            var domElem = document.getElementById("scene").appendChild(renderer.domElement);
+            
+            var camera = new THREE.PerspectiveCamera(40, 700 / 400, 0.1, 15000);
+            camera.position.set(0, 0, 50);
+            camera.lookAt(new THREE.Vector3(0, 0, 0));
+            
+            var bonesGeometry = [];
+            var base = new Bone(0,0,0,0,null,0xffffff);
+            var torso = new Bone(0,12,0,2,base,0xffff00);
+            var shoulder_lf = new Bone(2,12,0,1.5,torso,0xff0000);
+            var shoulder_rg = new Bone(-2,12,0,1.5,torso,0x00ff00);
+            var elbow_lf = new Bone(4.5,10,0,2.5,shoulder_lf,0xff00ff);
+            var hand_lf = new Bone(6,8,0,2.5,elbow_lf,0x0000ff);
+            var elbow_rg = new Bone(-4.5,10,0,2.5,shoulder_rg,0x00ffff);
+            var hand_rg = new Bone(-6,8,0,2.5,elbow_rg,0xff5555);
+            var head = new Bone(0,15,0,2.5,torso,0x55ffff);
+            var belly = new Bone(0,10,0,2.5,torso,0x550000);
+            var hip = new Bone(0,8,0,2,belly,0x5500ff);
+            var leg_lf = new Bone(1.5,7,0,1.8,hip,0x00ff00);
+            var leg_rg = new Bone(-1.5,7,0,1.8,hip,0xffff00);
+            var knee_rg = new Bone(-1.5,5,0,1.5,leg_rg,0x00ff00);
+            var knee_lf = new Bone(1.5,5,0,1.5,leg_lf,0xff0f0f);
+            var knee2_lf = new Bone(1.5,3,0,1.5,knee_lf,0xff0f0f);
+            var knee2_rg = new Bone(-1.5,3,0,1.5,knee_rg,0x00ff00);
+            var foot_lf = new Bone(1.5,1,0,1.8,knee2_lf,0xff00ff);
+            var foot_rg = new Bone(-1.5,1,0,1.8,knee2_rg,0x00ffff);
+            var foot2_lf = new Bone(1.5,0.5,1.5,1.5,foot_lf,0xff00ff);
+            var foot2_rg = new Bone(-1.5,0.5,1.5,1.5,foot_rg,0x00ffff);
+            bonesGeometry.push(base);
+            bonesGeometry.push(torso);
+            bonesGeometry.push(shoulder_lf);
+            bonesGeometry.push(shoulder_rg);
+            bonesGeometry.push(elbow_lf);
+            bonesGeometry.push(hand_lf);
+            bonesGeometry.push(elbow_rg);
+            bonesGeometry.push(hand_rg);
+            bonesGeometry.push(head);
+            bonesGeometry.push(belly);
+            bonesGeometry.push(hip);
+            bonesGeometry.push(leg_lf);
+            bonesGeometry.push(leg_rg);
+            bonesGeometry.push(knee_lf);
+            bonesGeometry.push(knee_rg);
+            bonesGeometry.push(knee2_lf);
+            bonesGeometry.push(knee2_rg);
+            bonesGeometry.push(foot_lf);
+            bonesGeometry.push(foot_rg);
+            bonesGeometry.push(foot2_lf);
+            bonesGeometry.push(foot2_rg);
+            
+            var uBonesQuatRotation = [];
+            var uBonesQuatTranslat = [];
+            var uBonesTransformation = [];
+            for(var k = 0; k < bonesGeometry.length; k++){
+                if(bonesGeometry[k].arrow != undefined)
+                    bonesScene.add(bonesGeometry[k].arrow);
+                //if(bonesGeometry[k].radius > 0)
+                //    scene.add(bonesGeometry[k].sphere);
+                var transfo = bonesGeometry[k].getTransformation();
+                uBonesTransformation[k] = transfo;
+                var dual = mat2dual(transfo);
+                uBonesQuatRotation[k] = dual.rotation;
+                uBonesQuatTranslat[k] = dual.translation;
+            }
+            
+            function mat2dual(mat){
+                var rotationQuat = new THREE.Quaternion();
+                var translationQuat = new THREE.Quaternion(mat.elements[12], mat.elements[13], mat.elements[14], 0.0);
+                rotationQuat.setFromRotationMatrix(mat);
+                if(rotationQuat.w < 0){
+                    rotationQuat.w *= -1;
+                    rotationQuat.x *= -1;
+                    rotationQuat.y *= -1;
+                    rotationQuat.z *= -1;
+                }
+        
+                translationQuat.multiplyQuaternions(translationQuat, rotationQuat);
+                translationQuat.x = translationQuat.x/2;
+                translationQuat.y = translationQuat.y/2;
+                translationQuat.z = translationQuat.z/2;
+                translationQuat.w = translationQuat.w/2;
+                
+                return {rotation:rotationQuat, translation:translationQuat};
+            }
+                    
+            material = new THREE.ShaderMaterial({
+                defines: {
+                	BONES: bonesGeometry.length
+                },
+                uniforms: {
+                    uBonesQuatRotation: { type: "v4v", value: uBonesQuatRotation },
+                    uBonesQuatTranslat: { type: "v4v", value: uBonesQuatTranslat },
+                    uBonesTransformation: { type: "m4v", value: uBonesTransformation },
+                    texture: { type: "t", value: new THREE.ImageUtils.loadTexture( 'marvin.png' )},
+                    linear: { value:true }
+                },
+            	vertexShader: document.getElementById( 'vertexShader' ).textContent,
+            	fragmentShader: document.getElementById( 'fragmentShader' ).textContent
+            });
+            
+            var vertices = bufferGeometry.attributes.position;
+            var bones = [];
+            var weights = [];
+            
+            //Calculate weights (4 max per vertex) once only !
+            for(var i = 0; i < vertices.count; i++){
+                var current = new THREE.Vector3(vertices.getX(i),vertices.getY(i),vertices.getZ(i));
+                //Find closest 4
+                var list = [];
+                for(var j=0; j<bonesGeometry.length; j++){
+                    var bone = bonesGeometry[j];
+                    var dist = current.distanceTo(bone.position);
+                    if(dist < bone.radius){
+                        dist = (bone.radius-dist)/bone.radius;
+                    }
+                    else
+                        dist = 0;
+                    list.push({bone: j, dist: dist});
+                }
+                
+                list.sort(function(a, b) {
+                    return ((a.dist > b.dist) ? -1 : ((a.dist == b.dist) ? 0 : 1));
+                });
+                
+                //Calculate weights
+                var unWeights = [];
+                var total = 0;
+                for(var j=0; j<4; j++){
+                    var bone = bonesGeometry[list[j].bone];
+                    var dist = list[j].dist;
+                    unWeights[j] = dist;
+                    total += unWeights[j];
+                }
+                if(total == 0){
+                    weights = weights.concat([1,0,0,0]);
+                    bones = bones.concat([0,0,0,0]);
+                }
+                else {
+                    unWeights.forEach((e, i, a) => a[i] = e/total);
+                    weights = weights.concat(unWeights);
+                    bones = bones.concat([list[0].bone,list[1].bone,list[2].bone,list[3].bone]);
+                }
+            }
+            bones = new Uint8Array(bones);
+            weights = new Float32Array(weights);
+            
+            // itemSize = 3 because there are 3 values (components) per vertex
+            bufferGeometry.addAttribute( 'weights', new THREE.BufferAttribute( weights, 4) );
+            bufferGeometry.addAttribute( 'bones', new THREE.BufferAttribute( bones, 4) );
+            
+            var mesh = new THREE.Mesh( bufferGeometry, material );
+            
+            scene.add(mesh);
+            //scene.add(wireframe);
+                
+            var camControls = new THREE.TrackballControls( camera, domElem );
+        	camControls.rotateSpeed = 5.0;
+        	camControls.zoomSpeed = 1.2;
+        	camControls.panSpeed = 0.8;
+        	camControls.noZoom = false;
+        	camControls.noPan = false;
+        	camControls.staticMoving = true;
+        	camControls.dynamicDampingFactor = 0.3;
+        	camControls.keys = [ 65, 83, 68 ];
+        	camControls.addEventListener( 'change', render );
+            
+            var clock = new THREE.Clock();
+            
+            (function animloop(){
+              requestAnimationFrame(animloop);
+              camControls.update(clock.getDelta());
+              
+                for(var k = 0; k < bonesGeometry.length; k++){
+                    var transfo = bonesGeometry[k].getTransformation();
+                    uBonesTransformation[k] = transfo;
+                    var dual = mat2dual(transfo);
+                    uBonesQuatRotation[k] = dual.rotation;
+                    uBonesQuatTranslat[k] = dual.translation;
+                }
+              
+              
+              render();
+              
+              var t = clock.getElapsedTime();
+              
+              base.transformation.makeTranslation(0,-7,0);
+              
+              head.transformation.makeRotationY(t*Math.log(t));
+              head.transformation.multiply(new THREE.Matrix4().makeRotationX(0.3));
+              
+              leg_lf.transformation.makeRotationX(-0.7*Math.cos(t));
+              knee_lf.transformation.makeRotationX(1.2);
+              foot_lf.transformation.makeRotationX(0.3);
+              foot2_lf.transformation.makeRotationX(-1.0*Math.cos(t));
+              
+              leg_rg.transformation.makeRotationX(-1-0.7*Math.cos(t+Math.PI/2));
+              knee_rg.transformation.makeRotationX(1.2);
+              foot_rg.transformation.makeRotationX(0.3);
+              foot2_rg.transformation.makeRotationX(-1.0*Math.cos(t+Math.PI/2));
+              
+              belly.transformation.makeRotationX(-0.5+0.5*Math.cos(t+Math.PI/4));
+              
+              shoulder_lf.transformation.makeRotationX(-1.5*Math.cos(t));
+             
+              shoulder_rg.transformation.makeRotationX(-1.5*Math.cos(t+Math.PI));
+              
+            })();
+            
+            function render(){
+                renderer.clear();
+        		renderer.render( scene, camera );
+        		renderer.clearDepth();
+        		renderer.render( bonesScene, camera );
+            }
+        });
+        
+        
+    }
+    initMesh();
+    
+   
+</script>
