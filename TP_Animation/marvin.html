@@ -32,14 +32,15 @@
             }
             else{
                 vec4 wRotQuat = vec4(0.0);
-                for (int i = 0; i < 4; i++) {
-                    wRotQuat += uBonesQuatRotation[int(bones[i])] * weights[i];
-                }
-                
                 vec4 wTransQuat = vec4(0.0);
-                for (int i = 0; i < 4; i++) {
-                    wTransQuat += uBonesQuatTranslat[int(bones[i])] * weights[i];
+                for (int i = 0; i < 2; i++) {
+                    float w = weights[i];
+                    if( dot(uBonesQuatRotation[int(bones[i])], wRotQuat) < 0.0 )
+                        w *= -1.0;
+                    wRotQuat += uBonesQuatRotation[int(bones[i])] * w;
+                    wTransQuat += uBonesQuatTranslat[int(bones[i])] * w;
                 }
+
                 
                 float xRot = wRotQuat[0];
                 float yRot = wRotQuat[1];
@@ -106,24 +107,40 @@
     </head>
     <body>
 		<section><article>
+		<a href="index.html"><< Retour</a>
         <h1>Marvin</h1>
         <input type="radio" id="linear" name="blending" value="linear" onchange="material.uniforms.linear.value=true;" checked><label for="linear">Linear</label> - <input type="radio" id="dual" name="blending" value="dual" onchange="material.uniforms.linear.value=false;"><label for="dual">Dual</label>
+        <label><input type="checkbox" autocomplete=off checked=true onchange="setVisibleBones(this.checked)" name="bones" value="bones">Visible Bones</label>
         <div id="scene"></div>
 	    </article></section>
     </body>
 </html>
 <script>
     /*global THREE*/
+    function setVisibleBones(b){
+        for(var k = 0; k < bonesGeometry.length; k++){
+            if(b){
+                if(bonesGeometry[k].arrow != undefined)
+                    bonesScene.add(bonesGeometry[k].arrow);
+            }
+            else{
+                if(bonesGeometry[k].arrow != undefined)
+                    bonesScene.remove(bonesGeometry[k].arrow);
+            }
+        }
+    }
     
     //var bufferGeometry = new THREE.CylinderBufferGeometry( 2, 2, 10, 16, 20 );
     var mesh = null;
     var material;
+    var bonesGeometry;
+    var bonesScene = new THREE.Scene();
+    
     function initMesh() {
         var loader = new THREE.JSONLoader();
         loader.load('marvin.json', function(geometry) {
             var bufferGeometry = new THREE.BufferGeometry().fromGeometry( geometry );
             var scene = new THREE.Scene();
-            var bonesScene = new THREE.Scene();
         
             var renderer = new THREE.WebGLRenderer();
             renderer.autoClear = false;
@@ -136,7 +153,7 @@
             camera.position.set(0, 0, 50);
             camera.lookAt(new THREE.Vector3(0, 0, 0));
             
-            var bonesGeometry = [];
+            bonesGeometry = [];
             var base = new Bone(0,0,0,0,null,0xffffff);
             var torso = new Bone(0,12,0,2,base,0xffff00);
             var shoulder_lf = new Bone(2,12,0,1.5,torso,0xff0000);
@@ -335,7 +352,6 @@
               shoulder_lf.transformation.makeRotationX(-1.5*Math.cos(t));
              
               shoulder_rg.transformation.makeRotationX(-1.5*Math.cos(t+Math.PI));
-              
             })();
             
             function render(){
