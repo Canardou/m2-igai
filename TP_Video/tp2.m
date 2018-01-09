@@ -8,7 +8,7 @@ U = 0:7;
 V = 0:7;
 for u = U
     for v = V
-        Mat{u*8+v+1} = @(x,y) c(u)*c(v)/4*sum(sum(cos((2*x+1)*u*pi/16)*cos((2*y+1)*v*pi/16)));
+        Mat{u*8+v+1} = @(x,y) c(u)*c(v)/4*sum(sum(cos((2*(U+x)+1)*u*pi/16).*cos((2*(V+y)+1)*v*pi/16)));
     end
 end
 

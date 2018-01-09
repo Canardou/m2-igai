@@ -1,6 +1,6 @@
 %% I 0 A
 load('us.mat');
-load('hilbert.mat');
+load('demod.mat');
 %% B
 colormap(gray);
 imagesc(im);
@@ -39,11 +39,11 @@ histogram(y_log);
 % capteur
 
 %% E
-y_log_b = log(10+1*y);
+bmod = log(10+1*y);
 colormap(gray);
-imagesc(y_log_b);
+imagesc(bmod);
 figure;
-histogram(y_log_b);
+histogram(bmod);
 
 %% 3
 t = (1:size(im(:,1),1))/size(im(:,1),1)-0.5;
